@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Produits - NDOSIPHAR{% endblock %}
+{% block page_title %}Gestion des Produits{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-box-seam"></i> Liste des Produits</span>
+        <div class="d-flex gap-1">
+            {% if request.user.is_admin %}
+            <a href="{% url 'export_produits' %}" class="btn btn-success btn-sm"><i class="bi bi-download"></i> Export</a>
+            <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('importProduit').click()"><i class="bi bi-upload"></i> Import</button>
+            {% endif %}
+            {% if not request.user.is_vendeur %}
+            <a href="{% url 'produit_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nouveau Produit</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Désignation</th>
+                        <th>Catégorie</th>
+                        <th>Fournisseur</th>
+                        <th>Prix Achat</th>
+                        <th>Prix Vente</th>
+                        <th>Qté Initiale</th>
+                        <th>Stock</th>
+                        <th>Expiration</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in produits %}
+                    <tr class="{% if p.est_expire %}table-danger{% elif p.expiration_alerte %}table-warning{% elif p.stock_alerte %}table-warning{% endif %}">
+                        <td>{{ p.code_produit }}</td>
+                        <td><strong>{{ p.designation }}</strong></td>
+                        <td>{{ p.categorie.designation }}</td>
+                        <td>{{ p.fournisseur.designation }}</td>
+                        <td>{{ p.prix_achat|floatformat:2 }} FC</td>
+                        <td><strong>{{ p.prix_vente|floatformat:2 }} FC</strong></td>
+                        <td><span class="badge bg-secondary">{{ p.quantite_initiale }}</span></td>
+                        <td>
+                            {% if p.stock_alerte %}
+                            <span class="badge bg-danger">{{ p.quantite_stock }}</span>
+                            {% else %}
+                            <span class="badge bg-success">{{ p.quantite_stock }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ p.date_expiration|date:"d/m/Y" }}
+                            {% if p.est_expire %}
+                            <span class="badge bg-danger">Expiré</span>
+                            {% elif p.expiration_alerte %}
+                            <span class="badge bg-warning text-dark">{{ p.jours_avant_expiration }}j</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not request.user.is_vendeur %}
+                            <a href="{% url 'produit_edit' p.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'produit_delete' p.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="11" class="text-center text-muted">Aucun produit trouvé.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% if request.user.is_admin %}
+<form method="post" action="{% url 'import_produits' %}" enctype="multipart/form-data" style="display:none;">
+    {% csrf_token %}
+    <input type="file" id="importProduit" name="fichier_excel" accept=".xlsx" onchange="this.form.submit()">
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Vente #{{ vente.code_vente }} - NDOSIPHAR{% endblock %}
+{% block page_title %}Détail Vente #{{ vente.code_vente }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cart3"></i> Lignes de la Vente</span>
+                <span class="badge bg-primary fs-6">Total: {{ vente.montant_total|floatformat:2 }} FC</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix Unitaire</th>
+                                <th>Montant</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ligne in lignes %}
+                            <tr>
+                                <td><strong>{{ ligne.produit.designation }}</strong></td>
+                                <td>{{ ligne.quantite }}</td>
+                                <td>{{ ligne.prix_unitaire|floatformat:2 }} FC</td>
+                                <td><strong>{{ ligne.montant_ligne|floatformat:2 }} FC</strong></td>
+                                <td>
+                                    {% if not request.user.is_vendeur %}
+                                    <form method="post" action="{% url 'vente_remove_ligne' vente.pk ligne.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Supprimer cette ligne ?')"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted">Aucun produit ajouté.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if lignes %}
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="3" class="text-end">TOTAL:</th>
+                                <th>{{ vente.montant_total|floatformat:2 }} FC</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <a href="{% url 'facture_pdf' vente.pk %}" class="btn btn-success" target="_blank"><i class="bi bi-printer"></i> Imprimer Facture</a>
+                    <a href="{% url 'vente_list' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Retour</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-info-circle"></i> Informations</div>
+            <div class="card-body">
+                <p><strong>Date:</strong> {{ vente.date_vente|date:"d/m/Y H:i" }}</p>
+                <p><strong>Client:</strong> {{ vente.client|default:"Client Anonyme" }}</p>
+                <p><strong>Type:</strong> {{ vente.get_type_vente_display }}</p>
+                <p><strong>Vendeur:</strong> {{ vente.vendeur.get_full_name|default:vente.vendeur.username }}</p>
+                {% if vente.observation %}
+                <p><strong>Observation:</strong> {{ vente.observation }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if not request.user.is_vendeur %}
+        <div class="card">
+            <div class="card-header"><i class="bi bi-plus-circle"></i> Ajouter un Produit</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'vente_add_ligne' vente.pk %}">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <button type="submit" class="btn btn-primary w-100 mt-2"><i class="bi bi-plus-lg"></i> Ajouter</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const printUrl = params.get('print');
+    if (printUrl) {
+        window.open(printUrl, '_blank');
+        history.replaceState(null, '', window.location.pathname);
+    }
+})();
+</script>
+{% endblock %}

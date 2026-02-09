@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block title %}Tableau de bord - NDOSIPHAR{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg">
+        <div class="card stat-card blue">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Produits</h6>
+                        <h3 class="mb-0">{{ total_produits }}</h3>
+                    </div>
+                    <div style="color:#1e8c45;"><i class="bi bi-box-seam" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg">
+        <div class="card stat-card green">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Catégories</h6>
+                        <h3 class="mb-0">{{ total_categories }}</h3>
+                    </div>
+                    <div class="text-success"><i class="bi bi-tags" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg">
+        <div class="card stat-card orange">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Fournisseurs</h6>
+                        <h3 class="mb-0">{{ total_fournisseurs }}</h3>
+                    </div>
+                    <div class="text-warning"><i class="bi bi-truck" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg">
+        <div class="card stat-card purple">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Clients</h6>
+                        <h3 class="mb-0">{{ total_clients }}</h3>
+                    </div>
+                    <div class="text-purple" style="color: #6f42c1;"><i class="bi bi-people" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg">
+        <div class="card stat-card red">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Ventes</h6>
+                        <h3 class="mb-0">{{ total_ventes }}</h3>
+                    </div>
+                    <div class="text-danger"><i class="bi bi-cart3" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Totaux Ventes : Jour / Semaine / Mois -->
+<style>
+    .montant-flou { filter: blur(8px); transition: filter 0.3s ease; user-select: none; }
+    .btn-oeil { background: rgba(255,255,255,0.2); border: none; color: #fff; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+    .btn-oeil:hover { background: rgba(255,255,255,0.35); }
+</style>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0" style="background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 14px;">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase" style="opacity:0.8; letter-spacing:1px; font-size:0.75rem;">Ventes du Jour</small>
+                        <h3 class="mb-0 fw-bold montant-vente montant-flou">{{ ventes_jour|floatformat:2 }} FC</h3>
+                        <small style="opacity:0.8;">{{ ventes_jour_nombre }} vente{{ ventes_jour_nombre|pluralize }}</small>
+                    </div>
+                    <button class="btn-oeil" onclick="toggleMontants(this)" title="Afficher/Masquer"><i class="bi bi-eye-slash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0" style="background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 14px;">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase" style="opacity:0.8; letter-spacing:1px; font-size:0.75rem;">Ventes de la Semaine</small>
+                        <h3 class="mb-0 fw-bold montant-vente montant-flou">{{ ventes_semaine|floatformat:2 }} FC</h3>
+                        <small style="opacity:0.8;">{{ ventes_semaine_nombre }} vente{{ ventes_semaine_nombre|pluralize }}</small>
+                    </div>
+                    <button class="btn-oeil" onclick="toggleMontants(this)" title="Afficher/Masquer"><i class="bi bi-eye-slash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0" style="background: linear-gradient(135deg, #f093fb, #f5576c); border-radius: 14px;">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-uppercase" style="opacity:0.8; letter-spacing:1px; font-size:0.75rem;">Ventes du Mois</small>
+                        <h3 class="mb-0 fw-bold montant-vente montant-flou">{{ ventes_mois|floatformat:2 }} FC</h3>
+                        <small style="opacity:0.8;">{{ ventes_mois_nombre }} vente{{ ventes_mois_nombre|pluralize }}</small>
+                    </div>
+                    <button class="btn-oeil" onclick="toggleMontants(this)" title="Afficher/Masquer"><i class="bi bi-eye-slash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clock-history"></i> Ventes Récentes</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Client</th>
+                                <th>Montant</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vente in ventes_recentes %}
+                            <tr>
+                                <td>{{ vente.code_vente }}</td>
+                                <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
+                                <td>{{ vente.client|default:"Client Anonyme" }}</td>
+                                <td><strong>{{ vente.montant_total|floatformat:2 }} FC</strong></td>
+                                <td><a href="{% url 'vente_detail' vente.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted">Aucune vente enregistrée.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-header text-danger"><i class="bi bi-exclamation-triangle"></i> Alerte Stock</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th>Initiale</th>
+                                <th>Stock</th>
+                                <th>Alerte</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for produit in produits_alerte %}
+                            <tr>
+                                <td>{{ produit.designation }}</td>
+                                <td><span class="badge bg-secondary">{{ produit.quantite_initiale }}</span></td>
+                                <td><span class="badge bg-danger">{{ produit.quantite_stock }}</span></td>
+                                <td>{{ produit.quantite_alerte }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted">Aucun produit en alerte.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header text-warning"><i class="bi bi-calendar-x"></i> Alerte Expiration</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th>Expiration</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for produit in produits_expiration %}
+                            <tr class="{% if produit.est_expire %}table-danger{% endif %}">
+                                <td>{{ produit.designation }}</td>
+                                <td>{{ produit.date_expiration|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if produit.est_expire %}
+                                    <span class="badge bg-danger">Expiré</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">{{ produit.jours_avant_expiration }}j restants</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted">Aucun produit proche de l'expiration.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleMontants(btn) {
+    const montants = document.querySelectorAll('.montant-vente');
+    const btns = document.querySelectorAll('.btn-oeil');
+    const isBlurred = montants[0].classList.contains('montant-flou');
+    montants.forEach(m => m.classList.toggle('montant-flou'));
+    btns.forEach(b => {
+        b.querySelector('i').className = isBlurred ? 'bi bi-eye' : 'bi bi-eye-slash';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ title }} - NDOSIPHAR{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vente-header { background: linear-gradient(135deg, #1e8c45 0%, #14532d 100%); border-radius: 16px; padding: 1.5rem; color: #fff; margin-bottom: 1.5rem; }
+    .vente-header h2 { font-weight: 700; margin: 0; }
+    .vente-header .badge { font-size: 1.1rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.2) !important; backdrop-filter: blur(4px); }
+    .vente-card { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; transition: transform 0.2s; }
+    .vente-card:hover { transform: translateY(-2px); }
+    .vente-card .card-header { background: #fff; font-weight: 700; font-size: 0.95rem; padding: 1rem 1.25rem; border-bottom: 2px solid #f0f0f0; }
+    .produit-selector { background: #f0fdf4; border-radius: 12px; padding: 1rem; border: 2px dashed #86efac; }
+    .produit-selector:focus-within { border-color: #1e8c45; background: #ecfdf5; }
+    .info-bar { background: linear-gradient(90deg, #ecfdf5, #f0fdf4); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    #tableLignes tbody tr { transition: all 0.2s; }
+    #tableLignes tbody tr:hover { background: #f0fdf4; }
+    .btn-enregistrer { background: linear-gradient(135deg, #11998e, #38ef7d); border: none; font-weight: 700; font-size: 1.1rem; padding: 0.8rem; border-radius: 12px; letter-spacing: 0.5px; transition: all 0.3s; }
+    .btn-enregistrer:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(17,153,142,0.4); }
+    .btn-enregistrer:disabled { background: #adb5bd; transform: none; box-shadow: none; }
+    .total-display { background: linear-gradient(135deg, #1e8c45, #14532d); color: #fff; border-radius: 12px; padding: 1rem 1.5rem; text-align: center; }
+    .total-display .amount { font-size: 1.6rem; font-weight: 800; }
+    .client-toggle { cursor: pointer; color: #1e8c45; font-weight: 600; font-size: 0.85rem; }
+    .client-toggle:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="venteForm">
+    {% csrf_token %}
+    <input type="hidden" name="lignes_json" id="lignes_json" value="[]">
+    <input type="hidden" name="observation" value="">
+
+    <div class="row g-4">
+        <!-- Colonne gauche: Client + Type -->
+        <div class="col-lg-4">
+            <div class="vente-card card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-person-circle text-primary"></i> Client
+                </div>
+                <div class="card-body p-3">
+                    {{ form.client }}
+                    <div class="text-center mt-3">
+                        <span class="client-toggle" onclick="toggleNouveauClient()">
+                            <i class="bi bi-plus-circle" id="iconToggle"></i> <span id="labelToggle">Nouveau client</span>
+                        </span>
+                    </div>
+                    <div id="nouveauClient" class="d-none mt-3 pt-3 border-top">
+                        <div class="mb-2">{{ form.nouveau_client_nom }}</div>
+                        <div class="mb-2">{{ form.nouveau_client_telephone }}</div>
+                        {{ form.nouveau_client_adresse }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="vente-card card">
+                <div class="card-header">
+                    <i class="bi bi-receipt-cutoff text-primary"></i> Type de Vente
+                </div>
+                <div class="card-body p-3">
+                    {{ form.type_vente }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite: Produits + Total + Bouton -->
+        <div class="col-lg-8">
+            <div class="vente-card card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-cart-plus text-primary"></i> Produits de la vente</span>
+                    <span class="badge bg-primary rounded-pill" id="compteurLignes">0 article(s)</span>
+                </div>
+                <div class="card-body">
+                    <!-- Sélecteur produit -->
+                    <div class="produit-selector mb-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-5">
+                                <select class="form-select border-0 bg-transparent" id="selectProduit">
+                                    <option value="">-- Choisir un produit --</option>
+                                    {% for p in produits_disponibles %}
+                                    <option value="{{ p.pk }}" data-prix="{{ p.prix_vente }}" data-stock="{{ p.quantite_stock }}" data-nom="{{ p.designation }}">
+                                        {{ p.designation }} ({{ p.quantite_stock }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control border-0 bg-transparent" id="inputQuantite" placeholder="Qté" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <span class="fw-bold text-primary" id="prixAffiche">0,00 FC</span>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-primary w-100 rounded-pill" onclick="ajouterLigne()">
+                                    <i class="bi bi-plus-lg"></i> Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="infoStock" class="info-bar mb-3" style="display:none;">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        Stock: <strong id="stockDispo">0</strong> &bull; P.U.: <strong id="prixUnit">0 FC</strong>
+                    </div>
+
+                    <!-- Tableau -->
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="tableLignes">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #e9ecef;">
+                                    <th class="text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">Produit</th>
+                                    <th class="text-center text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">Qté</th>
+                                    <th class="text-end text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">P.U.</th>
+                                    <th class="text-end text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">Montant</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyLignes">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="bi bi-cart text-muted" style="font-size:2rem;"></i>
+                                        <p class="text-muted mt-2 mb-0">Ajoutez des produits pour commencer</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total + Bouton en bas du tableau -->
+            <div class="mt-3">
+                <div class="total-display mb-3" id="totalBlock" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span style="font-size:1rem; opacity:0.9;">TOTAL A PAYER</span>
+                        <span class="amount" id="totalGeneral">0,00 FC</span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-enregistrer text-white flex-grow-1" id="btnEnregistrer" disabled>
+                        <i class="bi bi-printer"></i> Imprimer la Facture
+                    </button>
+                    <a href="{% url 'vente_list' %}" class="btn btn-light border px-4" style="border-radius:12px;">Annuler</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+let lignes = [];
+let nouveauClientVisible = false;
+
+const selectProduit = document.getElementById('selectProduit');
+const inputQuantite = document.getElementById('inputQuantite');
+const prixAffiche = document.getElementById('prixAffiche');
+const infoStock = document.getElementById('infoStock');
+const stockDispo = document.getElementById('stockDispo');
+const prixUnit = document.getElementById('prixUnit');
+
+function toggleNouveauClient() {
+    const bloc = document.getElementById('nouveauClient');
+    const clientSelect = document.getElementById('id_client');
+    nouveauClientVisible = !nouveauClientVisible;
+    bloc.classList.toggle('d-none');
+    if (nouveauClientVisible) {
+        clientSelect.value = '';
+        clientSelect.disabled = true;
+        document.getElementById('iconToggle').className = 'bi bi-x-circle';
+        document.getElementById('labelToggle').textContent = 'Annuler';
+    } else {
+        clientSelect.disabled = false;
+        document.getElementById('iconToggle').className = 'bi bi-plus-circle';
+        document.getElementById('labelToggle').textContent = 'Nouveau client';
+        document.querySelectorAll('#nouveauClient input').forEach(i => i.value = '');
+    }
+}
+
+selectProduit.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (this.value) {
+        const prix = parseFloat(opt.dataset.prix);
+        const stock = parseInt(opt.dataset.stock);
+        infoStock.style.display = 'flex';
+        stockDispo.textContent = stock;
+        prixUnit.textContent = formatMontant(prix) + ' FC';
+        inputQuantite.max = stock;
+        inputQuantite.value = '';
+        inputQuantite.focus();
+        prixAffiche.textContent = '0,00 FC';
+    } else {
+        infoStock.style.display = 'none';
+        prixAffiche.textContent = '0,00 FC';
+    }
+});
+
+inputQuantite.addEventListener('input', function() {
+    const opt = selectProduit.options[selectProduit.selectedIndex];
+    if (selectProduit.value && this.value) {
+        const prix = parseFloat(opt.dataset.prix);
+        const montant = prix * parseInt(this.value);
+        prixAffiche.textContent = formatMontant(montant) + ' FC';
+    } else {
+        prixAffiche.textContent = '0,00 FC';
+    }
+});
+
+inputQuantite.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); ajouterLigne(); }
+});
+
+function ajouterLigne() {
+    const opt = selectProduit.options[selectProduit.selectedIndex];
+    if (!selectProduit.value || !inputQuantite.value) {
+        alert('Sélectionnez un produit et entrez la quantité.');
+        return;
+    }
+    const produitId = parseInt(selectProduit.value);
+    const qte = parseInt(inputQuantite.value);
+    const stock = parseInt(opt.dataset.stock);
+    const nom = opt.dataset.nom;
+    const prix = parseFloat(opt.dataset.prix);
+
+    if (qte <= 0) { alert('La quantité doit être supérieure à 0.'); return; }
+    if (qte > stock) { alert('Stock insuffisant ! Disponible: ' + stock); return; }
+
+    const existe = lignes.findIndex(l => l.produit_id === produitId);
+    if (existe >= 0) {
+        const newQte = lignes[existe].quantite + qte;
+        if (newQte > stock) { alert('Stock insuffisant ! Disponible: ' + stock); return; }
+        lignes[existe].quantite = newQte;
+        lignes[existe].montant = newQte * prix;
+    } else {
+        lignes.push({ produit_id: produitId, nom: nom, quantite: qte, prix_unitaire: prix, montant: qte * prix });
+    }
+
+    selectProduit.value = '';
+    inputQuantite.value = '';
+    prixAffiche.textContent = '0,00 FC';
+    infoStock.style.display = 'none';
+    selectProduit.focus();
+    rafraichirTableau();
+}
+
+function supprimerLigne(index) {
+    lignes.splice(index, 1);
+    rafraichirTableau();
+}
+
+function rafraichirTableau() {
+    const tbody = document.getElementById('tbodyLignes');
+    const totalBlock = document.getElementById('totalBlock');
+
+    tbody.innerHTML = '';
+
+    if (lignes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="bi bi-cart text-muted" style="font-size:2rem;"></i><p class="text-muted mt-2 mb-0">Ajoutez des produits pour commencer</p></td></tr>';
+        totalBlock.style.display = 'none';
+        document.getElementById('btnEnregistrer').disabled = true;
+        document.getElementById('compteurLignes').textContent = '0 article(s)';
+    } else {
+        let total = 0;
+        lignes.forEach((l, i) => {
+            total += l.montant;
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${l.nom}</strong></td>
+                    <td class="text-center"><span class="badge bg-primary rounded-pill px-3">${l.quantite}</span></td>
+                    <td class="text-end text-muted">${formatMontant(l.prix_unitaire)} FC</td>
+                    <td class="text-end"><strong>${formatMontant(l.montant)} FC</strong></td>
+                    <td class="text-end"><button type="button" class="btn btn-sm text-danger border-0" onclick="supprimerLigne(${i})"><i class="bi bi-trash3"></i></button></td>
+                </tr>`;
+        });
+        totalBlock.style.display = 'block';
+        document.getElementById('totalGeneral').textContent = formatMontant(total) + ' FC';
+        document.getElementById('btnEnregistrer').disabled = false;
+        document.getElementById('compteurLignes').textContent = lignes.length + ' article(s)';
+    }
+
+    document.getElementById('lignes_json').value = JSON.stringify(lignes);
+}
+
+function formatMontant(n) {
+    return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ').replace('.', ',');
+}
+
+document.getElementById('venteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnEnregistrer');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Enregistrement...';
+
+    const clientSelect = document.getElementById('id_client');
+    if (clientSelect.disabled) clientSelect.disabled = false;
+
+    const formData = new FormData(this);
+    fetch(this.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.open(data.facture_url, '_blank');
+            window.location.href = data.detail_url;
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-printer"></i> Imprimer la Facture';
+    });
+});
+</script>
+{% endblock %}

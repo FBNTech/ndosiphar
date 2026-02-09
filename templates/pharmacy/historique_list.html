@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Historique - NDOSIPHAR{% endblock %}
+{% block page_title %}Historique des Actions{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> Journal d'Audit</span>
+        <span class="badge bg-secondary">{{ historiques|length }} entrée(s)</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date & Heure</th>
+                        <th>Utilisateur</th>
+                        <th>Action</th>
+                        <th>Module</th>
+                        <th>Détail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in historiques %}
+                    <tr>
+                        <td><small class="text-muted">{{ h.date_action|date:"d/m/Y H:i:s" }}</small></td>
+                        <td>
+                            {% if h.utilisateur %}
+                            <strong>{{ h.utilisateur.get_full_name|default:h.utilisateur.username }}</strong>
+                            <br><small class="text-muted">{{ h.utilisateur.get_role_display }}</small>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if h.action == 'creation' %}
+                            <span class="badge bg-success"><i class="bi bi-plus-circle"></i> Création</span>
+                            {% elif h.action == 'modification' %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-pencil"></i> Modification</span>
+                            {% elif h.action == 'suppression' %}
+                            <span class="badge bg-danger"><i class="bi bi-trash"></i> Suppression</span>
+                            {% elif h.action == 'connexion' %}
+                            <span class="badge bg-info"><i class="bi bi-box-arrow-in-right"></i> Connexion</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ h.get_action_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ h.modele|default:"—" }}</td>
+                        <td><small>{{ h.detail|default:"—" }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted">Aucune action enregistrée.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

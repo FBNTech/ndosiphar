@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Ventes - NDOSIPHAR{% endblock %}
+{% block page_title %}Gestion des Ventes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-cart3"></i> Liste des Ventes</span>
+        <div class="d-flex gap-1">
+            {% if request.user.is_admin %}
+            <a href="{% url 'export_ventes' %}" class="btn btn-success btn-sm"><i class="bi bi-download"></i> Export</a>
+            {% endif %}
+            <a href="{% url 'vente_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nouvelle Vente</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>N°</th>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th>Type</th>
+                        <th>Vendeur</th>
+                        <th>Montant Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventes %}
+                    <tr>
+                        <td>{{ v.code_vente }}</td>
+                        <td>{{ v.date_vente|date:"d/m/Y H:i" }}</td>
+                        <td>{{ v.client|default:"Client Anonyme" }}</td>
+                        <td><span class="badge bg-{% if v.type_vente == 'gros' %}primary{% else %}info{% endif %}">{{ v.get_type_vente_display }}</span></td>
+                        <td>{{ v.vendeur.get_full_name|default:v.vendeur.username }}</td>
+                        <td><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                        <td>
+                            <a href="{% url 'vente_detail' v.pk %}" class="btn btn-outline-primary btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
+                            <a href="{% url 'facture_pdf' v.pk %}" class="btn btn-outline-success btn-sm" title="Facture PDF" target="_blank"><i class="bi bi-printer"></i></a>
+                            {% if not request.user.is_vendeur %}
+                            <a href="{% url 'vente_delete' v.pk %}" class="btn btn-outline-danger btn-sm" title="Supprimer"><i class="bi bi-trash"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">Aucune vente enregistrée.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

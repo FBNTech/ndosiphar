@@ -1,0 +1,190 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4 landscape; margin: 0.6cm 0.8cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 9px; color: #333; margin: 0; padding: 0; }
+        .main-table { width: 100%; }
+        .main-table td.facture-col { width: 49%; vertical-align: top; padding: 0 4px; }
+        .main-table td.cut-col { width: 2%; vertical-align: top; }
+        .cut-vertical { border-left: 1px dashed #999; height: 19cm; }
+        .header { text-align: center; border-bottom: 2px solid #1e8c45; padding-bottom: 5px; margin-bottom: 6px; }
+        .header h1 { margin: 0; color: #1e8c45; font-size: 16px; }
+        .header p { margin: 1px 0; color: #666; font-size: 7px; }
+        .logo-img { height: 30px; margin-bottom: 3px; }
+        .info-section { margin-bottom: 6px; }
+        .info-table { width: 100%; }
+        .info-table td { padding: 1px 2px; vertical-align: top; font-size: 8px; }
+        .info-label { font-weight: bold; color: #1e8c45; width: 65px; }
+        .facture-title { background: #1e8c45; color: white; padding: 3px 8px; font-size: 10px; font-weight: bold; margin: 6px 0 5px; }
+        table.items { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        table.items th { background: #e8f5e9; border: 1px solid #c8e6c9; padding: 2px 4px; text-align: left; font-size: 7px; color: #2e7d32; }
+        table.items td { border: 1px solid #dee2e6; padding: 2px 4px; font-size: 8px; }
+        table.items tr:nth-child(even) { background: #f8f9fa; }
+        .total-section { margin-top: 3px; }
+        .total-table { width: 100%; font-size: 8px; }
+        .total-table td { padding: 1px 4px; }
+        .total-table .label { text-align: right; color: #555; width: 70%; }
+        .total-table .value { text-align: right; font-weight: bold; }
+        .total-net { background: #1e8c45; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; text-align: right; }
+        .signatures { margin-top: 8px; }
+        .signatures table { width: 100%; }
+        .signatures td { width: 50%; text-align: center; font-size: 8px; padding-top: 4px; }
+        .sig-line { border-top: 1px solid #333; width: 80%; margin: 20px auto 2px; }
+        .footer { text-align: center; margin-top: 4px; padding-top: 3px; border-top: 1px solid #dee2e6; color: #999; font-size: 6px; }
+        .text-right { text-align: right; }
+        .remise-row { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <table class="main-table"><tr>
+        <!-- ===== Exemplaire GAUCHE ===== -->
+        <td class="facture-col">
+            <div class="header">
+                <img src="file:///{{ logo_path }}" class="logo-img" alt=""><br>
+                <h1>NDOSIPHAR</h1>
+                <p>Pharmacie - Vente en Gros et au Détail</p>
+            </div>
+            <div class="facture-title">FACTURE N° {{ vente.code_vente }}</div>
+            <div class="info-section">
+                <table class="info-table">
+                    <tr>
+                        <td>
+                            <table>
+                                <tr><td class="info-label">Date:</td><td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td></tr>
+                                <tr><td class="info-label">Type:</td><td>{{ vente.get_type_vente_display }}</td></tr>
+                                <tr><td class="info-label">Vendeur:</td><td>{{ vente.vendeur.get_full_name|default:vente.vendeur.username }}</td></tr>
+                            </table>
+                        </td>
+                        <td>
+                            <table>
+                                <tr><td class="info-label">Client:</td><td>{{ vente.client|default:"Client Anonyme" }}</td></tr>
+                                {% if vente.client %}
+                                <tr><td class="info-label">Tél:</td><td>{{ vente.client.telephone|default:"-" }}</td></tr>
+                                <tr><td class="info-label">Adresse:</td><td>{{ vente.client.adresse|default:"-" }}</td></tr>
+                                {% endif %}
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <table class="items">
+                <thead>
+                    <tr>
+                        <th style="width:5%;">N°</th>
+                        <th style="width:38%;">Désignation</th>
+                        <th style="width:12%;" class="text-right">Qté</th>
+                        <th style="width:20%;" class="text-right">P.U.</th>
+                        <th style="width:25%;" class="text-right">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in lignes %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ ligne.produit.designation }}</td>
+                        <td class="text-right">{{ ligne.quantite }}</td>
+                        <td class="text-right">{{ ligne.prix_unitaire|floatformat:2 }} FC</td>
+                        <td class="text-right"><strong>{{ ligne.montant_ligne|floatformat:2 }} FC</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="total-section">
+                <table class="total-table">
+                    <tr><td class="label">Sous-total:</td><td class="value">{{ vente.montant_total|floatformat:2 }} FC</td></tr>
+                    {% if vente.remise_pourcent > 0 %}
+                    <tr class="remise-row"><td class="label">Remise ({{ vente.remise_pourcent }}%):</td><td class="value">-{{ vente.montant_remise|floatformat:2 }} FC</td></tr>
+                    {% endif %}
+                </table>
+                <div class="total-net">NET À PAYER: {{ vente.montant_net|floatformat:2 }} FC</div>
+            </div>
+            <div class="signatures">
+                <table><tr>
+                    <td><div class="sig-line"></div><strong>Le Vendeur</strong><br><small>{{ vente.vendeur.get_full_name|default:vente.vendeur.username }}</small></td>
+                    <td><div class="sig-line"></div><strong>L'Acheteur</strong><br><small>{{ vente.client|default:"Client Anonyme" }}</small></td>
+                </tr></table>
+            </div>
+            <div class="footer">
+                <p>NDOSIPHAR | Facture générée le {{ date_impression|date:"d/m/Y à H:i" }} | Merci pour votre confiance !</p>
+            </div>
+        </td>
+
+        <!-- ===== Ligne de découpe verticale ===== -->
+        <td class="cut-col"><div class="cut-vertical"></div></td>
+
+        <!-- ===== Exemplaire DROIT ===== -->
+        <td class="facture-col">
+            <div class="header">
+                <img src="file:///{{ logo_path }}" class="logo-img" alt=""><br>
+                <h1>NDOSIPHAR</h1>
+                <p>Pharmacie - Vente en Gros et au Détail</p>
+            </div>
+            <div class="facture-title">FACTURE N° {{ vente.code_vente }}</div>
+            <div class="info-section">
+                <table class="info-table">
+                    <tr>
+                        <td>
+                            <table>
+                                <tr><td class="info-label">Date:</td><td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td></tr>
+                                <tr><td class="info-label">Type:</td><td>{{ vente.get_type_vente_display }}</td></tr>
+                                <tr><td class="info-label">Vendeur:</td><td>{{ vente.vendeur.get_full_name|default:vente.vendeur.username }}</td></tr>
+                            </table>
+                        </td>
+                        <td>
+                            <table>
+                                <tr><td class="info-label">Client:</td><td>{{ vente.client|default:"Client Anonyme" }}</td></tr>
+                                {% if vente.client %}
+                                <tr><td class="info-label">Tél:</td><td>{{ vente.client.telephone|default:"-" }}</td></tr>
+                                <tr><td class="info-label">Adresse:</td><td>{{ vente.client.adresse|default:"-" }}</td></tr>
+                                {% endif %}
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <table class="items">
+                <thead>
+                    <tr>
+                        <th style="width:5%;">N°</th>
+                        <th style="width:38%;">Désignation</th>
+                        <th style="width:12%;" class="text-right">Qté</th>
+                        <th style="width:20%;" class="text-right">P.U.</th>
+                        <th style="width:25%;" class="text-right">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in lignes %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ ligne.produit.designation }}</td>
+                        <td class="text-right">{{ ligne.quantite }}</td>
+                        <td class="text-right">{{ ligne.prix_unitaire|floatformat:2 }} FC</td>
+                        <td class="text-right"><strong>{{ ligne.montant_ligne|floatformat:2 }} FC</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="total-section">
+                <table class="total-table">
+                    <tr><td class="label">Sous-total:</td><td class="value">{{ vente.montant_total|floatformat:2 }} FC</td></tr>
+                    {% if vente.remise_pourcent > 0 %}
+                    <tr class="remise-row"><td class="label">Remise ({{ vente.remise_pourcent }}%):</td><td class="value">-{{ vente.montant_remise|floatformat:2 }} FC</td></tr>
+                    {% endif %}
+                </table>
+                <div class="total-net">NET À PAYER: {{ vente.montant_net|floatformat:2 }} FC</div>
+            </div>
+            <div class="signatures">
+                <table><tr>
+                    <td><div class="sig-line"></div><strong>Le Vendeur</strong><br><small>{{ vente.vendeur.get_full_name|default:vente.vendeur.username }}</small></td>
+                    <td><div class="sig-line"></div><strong>L'Acheteur</strong><br><small>{{ vente.client|default:"Client Anonyme" }}</small></td>
+                </tr></table>
+            </div>
+            <div class="footer">
+                <p>NDOSIPHAR | Facture générée le {{ date_impression|date:"d/m/Y à H:i" }} | Merci pour votre confiance !</p>
+            </div>
+        </td>
+    </tr></table>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Clients - NDOSIPHAR{% endblock %}
+{% block page_title %}Gestion des Clients{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people"></i> Liste des Clients</span>
+        <div class="d-flex gap-1">
+            {% if request.user.is_admin %}
+            <a href="{% url 'export_clients' %}" class="btn btn-success btn-sm"><i class="bi bi-download"></i> Export</a>
+            <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('importClient').click()"><i class="bi bi-upload"></i> Import</button>
+            {% endif %}
+            <a href="{% url 'client_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nouveau Client</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Nom</th>
+                        <th>Téléphone</th>
+                        <th>Adresse</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clients %}
+                    <tr>
+                        <td>{{ c.code_client }}</td>
+                        <td><strong>{{ c.nom }}</strong></td>
+                        <td>{{ c.telephone|default:"-" }}</td>
+                        <td>{{ c.adresse|default:"-" }}</td>
+                        <td>
+                            {% if not request.user.is_vendeur %}
+                            <a href="{% url 'client_edit' c.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'client_delete' c.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted">Aucun client trouvé.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% if request.user.is_admin %}
+<form method="post" action="{% url 'import_clients' %}" enctype="multipart/form-data" style="display:none;">
+    {% csrf_token %}
+    <input type="file" id="importClient" name="fichier_excel" accept=".xlsx" onchange="this.form.submit()">
+</form>
+{% endif %}
+{% endblock %}
