@@ -1,0 +1,590 @@
+[
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$yGSFkuQ2DH86myXCj6tkop$dN6Xcbv7eIkV6XJv1uEhS0iczCK0SR9NGzsmFSc1D2k=",
+    "last_login": "2026-02-11T05:57:14.225Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "Admin",
+    "last_name": "NDOSIPHAR",
+    "email": "admin@ndosiphar.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-02-09T13:40:20.032Z",
+    "role": "admin",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$7KixzyypxiM1fnAotsRvS3$R81iAOJZLO8wlYt28Cjp+rhkwx82c9HnERWcp5MbkJU=",
+    "last_login": "2026-02-09T18:33:20.113Z",
+    "is_superuser": false,
+    "username": "NaomieB",
+    "first_name": "Naomie",
+    "last_name": "Boketa",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-02-09T15:10:13.428Z",
+    "role": "vendeur",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$SNa1gi5TJAoEKMFdu2GLig$vWm6oY2QEv3MZ2pjJSzQhAaLulat3hFnwM5g/FQX1U8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "luzolo",
+    "first_name": "LUZ",
+    "last_name": "LUZOLO",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-02-11T13:02:20.637Z",
+    "role": "gestionnaire",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$p8I2rcdOn0uzqyTJFGat3N$vpFyGrmlVRW/TY7jXNPJoMB2q1gPQJUTlNwB56WGH0c=",
+    "last_login": "2026-02-11T14:53:59.820Z",
+    "is_superuser": false,
+    "username": "pharma",
+    "first_name": "Fils",
+    "last_name": "Ndosi",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-02-11T13:04:36.713Z",
+    "role": "controleur",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "pharmacy.taux",
+  "pk": 1,
+  "fields": {
+    "code_devise": "USD",
+    "montant_fc": "2450.00",
+    "date_mise_a_jour": "2026-02-11T11:46:13.337Z"
+  }
+},
+{
+  "model": "pharmacy.fournisseur",
+  "pk": 1,
+  "fields": {
+    "designation": "Phatkin",
+    "marge_beneficiaire": "5.00"
+  }
+},
+{
+  "model": "pharmacy.fournisseur",
+  "pk": 2,
+  "fields": {
+    "designation": "Autres",
+    "marge_beneficiaire": "15.02"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 3,
+  "fields": {
+    "designation": "Ibucap",
+    "prix_achat": "250.00",
+    "quantite_initiale": 300,
+    "quantite_stock": 184,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 2,
+    "date_expiration": "2027-12-12",
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 4,
+  "fields": {
+    "designation": "orangine SIROP",
+    "prix_achat": "3500.00",
+    "quantite_initiale": 30,
+    "quantite_stock": 25,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 30,
+    "fournisseur": 1,
+    "date_expiration": "2027-12-23",
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 5,
+  "fields": {
+    "designation": "Aspirine",
+    "prix_achat": "400.00",
+    "quantite_initiale": 120,
+    "quantite_stock": 120,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 1,
+    "date_expiration": null,
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 6,
+  "fields": {
+    "designation": "Artesinat",
+    "prix_achat": "2500.00",
+    "quantite_initiale": 50,
+    "quantite_stock": 9,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 1,
+    "date_expiration": null,
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 7,
+  "fields": {
+    "designation": "Artemisia",
+    "prix_achat": "100.00",
+    "quantite_initiale": 200,
+    "quantite_stock": 100,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 2,
+    "date_expiration": null,
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 8,
+  "fields": {
+    "designation": "Orango",
+    "prix_achat": "340.00",
+    "quantite_initiale": 250,
+    "quantite_stock": 50,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 1,
+    "date_expiration": null,
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 9,
+  "fields": {
+    "designation": "Ibuprofen",
+    "prix_achat": "250.00",
+    "quantite_initiale": 15,
+    "quantite_stock": 10,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 1,
+    "date_expiration": null,
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 10,
+  "fields": {
+    "designation": "Artesoforga",
+    "prix_achat": "450.00",
+    "quantite_initiale": 15,
+    "quantite_stock": 15,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 1,
+    "date_expiration": "2026-02-26",
+    "prix_vente_usd": "0.0000"
+  }
+},
+{
+  "model": "pharmacy.produit",
+  "pk": 11,
+  "fields": {
+    "designation": "Paracetamol",
+    "prix_achat": "500.00",
+    "quantite_initiale": 200,
+    "quantite_stock": 200,
+    "quantite_alerte": 10,
+    "jours_alerte_expiration": 45,
+    "fournisseur": 1,
+    "date_expiration": null,
+    "prix_vente_usd": "0.2234"
+  }
+},
+{
+  "model": "pharmacy.client",
+  "pk": 1,
+  "fields": {
+    "nom": "Richard",
+    "telephone": "820366841",
+    "adresse": "Mbanza-Ngungu"
+  }
+},
+{
+  "model": "pharmacy.client",
+  "pk": 2,
+  "fields": {
+    "nom": "Fabrice Bonkile",
+    "telephone": "0840380701",
+    "adresse": "Mbanza-ngungu"
+  }
+},
+{
+  "model": "pharmacy.client",
+  "pk": 3,
+  "fields": {
+    "nom": "Esther Fabonk",
+    "telephone": "0820366841",
+    "adresse": "Kikonka"
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 7,
+  "fields": {
+    "date_vente": "2026-02-09T17:34:32.319Z",
+    "client": 1,
+    "type_vente": "detail",
+    "mode_paiement": "comptant",
+    "montant_total": "2750.00",
+    "montant_paye": "0.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 8,
+  "fields": {
+    "date_vente": "2026-02-09T18:30:29.958Z",
+    "client": 2,
+    "type_vente": "detail",
+    "mode_paiement": "comptant",
+    "montant_total": "47705.10",
+    "montant_paye": "0.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 9,
+  "fields": {
+    "date_vente": "2026-02-11T08:41:56.797Z",
+    "client": 1,
+    "type_vente": "detail",
+    "mode_paiement": "comptant",
+    "montant_total": "575.10",
+    "montant_paye": "0.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 10,
+  "fields": {
+    "date_vente": "2026-02-11T08:42:04.087Z",
+    "client": 1,
+    "type_vente": "detail",
+    "mode_paiement": "comptant",
+    "montant_total": "575.10",
+    "montant_paye": "0.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 15,
+  "fields": {
+    "date_vente": "2026-02-11T10:37:53.794Z",
+    "client": null,
+    "type_vente": "detail",
+    "mode_paiement": "comptant",
+    "montant_total": "107625.00",
+    "montant_paye": "0.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 16,
+  "fields": {
+    "date_vente": "2026-02-11T10:41:57.759Z",
+    "client": null,
+    "type_vente": "detail",
+    "mode_paiement": "comptant",
+    "montant_total": "1312.50",
+    "montant_paye": "0.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.vente",
+  "pk": 17,
+  "fields": {
+    "date_vente": "2026-02-11T11:18:23.644Z",
+    "client": 3,
+    "type_vente": "detail",
+    "mode_paiement": "credit",
+    "montant_total": "82902.00",
+    "montant_paye": "82902.00",
+    "est_solde": true,
+    "observation": "",
+    "vendeur": 1
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 10,
+  "fields": {
+    "vente": 7,
+    "produit": 3,
+    "quantite": 10,
+    "prix_unitaire": "275.00",
+    "montant_ligne": "2750.00"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 11,
+  "fields": {
+    "vente": 8,
+    "produit": 3,
+    "quantite": 102,
+    "prix_unitaire": "287.55",
+    "montant_ligne": "29330.10"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 12,
+  "fields": {
+    "vente": 8,
+    "produit": 4,
+    "quantite": 5,
+    "prix_unitaire": "3675.00",
+    "montant_ligne": "18375.00"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 13,
+  "fields": {
+    "vente": 9,
+    "produit": 3,
+    "quantite": 2,
+    "prix_unitaire": "287.55",
+    "montant_ligne": "575.10"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 14,
+  "fields": {
+    "vente": 10,
+    "produit": 3,
+    "quantite": 2,
+    "prix_unitaire": "287.55",
+    "montant_ligne": "575.10"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 19,
+  "fields": {
+    "vente": 15,
+    "produit": 6,
+    "quantite": 41,
+    "prix_unitaire": "2625.00",
+    "montant_ligne": "107625.00"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 20,
+  "fields": {
+    "vente": 16,
+    "produit": 9,
+    "quantite": 5,
+    "prix_unitaire": "262.50",
+    "montant_ligne": "1312.50"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 21,
+  "fields": {
+    "vente": 17,
+    "produit": 7,
+    "quantite": 100,
+    "prix_unitaire": "115.02",
+    "montant_ligne": "11502.00"
+  }
+},
+{
+  "model": "pharmacy.lignevente",
+  "pk": 22,
+  "fields": {
+    "vente": 17,
+    "produit": 8,
+    "quantite": 200,
+    "prix_unitaire": "357.00",
+    "montant_ligne": "71400.00"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 1,
+  "fields": {
+    "date_action": "2026-02-09T17:33:16.743Z",
+    "utilisateur": 1,
+    "action": "connexion",
+    "modele": "",
+    "detail": "Connexion de admin"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 2,
+  "fields": {
+    "date_action": "2026-02-09T17:34:32.456Z",
+    "utilisateur": 1,
+    "action": "creation",
+    "modele": "Vente",
+    "detail": "Vente #7 - 2750.00 FC"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 3,
+  "fields": {
+    "date_action": "2026-02-09T18:30:30.195Z",
+    "utilisateur": 1,
+    "action": "creation",
+    "modele": "Vente",
+    "detail": "Vente #8 - 42934.59 FC"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 4,
+  "fields": {
+    "date_action": "2026-02-09T18:33:20.146Z",
+    "utilisateur": 2,
+    "action": "connexion",
+    "modele": "",
+    "detail": "Connexion de NaomieB"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 5,
+  "fields": {
+    "date_action": "2026-02-11T05:57:14.254Z",
+    "utilisateur": 1,
+    "action": "connexion",
+    "modele": "",
+    "detail": "Connexion de admin"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 6,
+  "fields": {
+    "date_action": "2026-02-11T11:18:23.966Z",
+    "utilisateur": 1,
+    "action": "creation",
+    "modele": "Vente",
+    "detail": "Vente #17 - 82902.00 FC"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 7,
+  "fields": {
+    "date_action": "2026-02-11T11:20:22.209Z",
+    "utilisateur": 1,
+    "action": "paiement",
+    "modele": "Vente",
+    "detail": "Paiement 50000 FC sur vente #17"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 8,
+  "fields": {
+    "date_action": "2026-02-11T11:20:51.887Z",
+    "utilisateur": 1,
+    "action": "paiement",
+    "modele": "Vente",
+    "detail": "Paiement 32900 FC sur vente #17"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 9,
+  "fields": {
+    "date_action": "2026-02-11T11:21:13.959Z",
+    "utilisateur": 1,
+    "action": "paiement",
+    "modele": "Vente",
+    "detail": "Paiement 2 FC sur vente #17"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 10,
+  "fields": {
+    "date_action": "2026-02-11T13:05:03.550Z",
+    "utilisateur": 4,
+    "action": "connexion",
+    "modele": "",
+    "detail": "Connexion de pharma"
+  }
+},
+{
+  "model": "pharmacy.historique",
+  "pk": 11,
+  "fields": {
+    "date_action": "2026-02-11T14:53:59.853Z",
+    "utilisateur": 4,
+    "action": "connexion",
+    "modele": "",
+    "detail": "Connexion de pharma"
+  }
+}
+]
