@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Sélectionner un fournisseur - NDOSIPHAR{% endblock %}
+{% block page_title %}Sélectionner un fournisseur{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-truck text-primary"></i> Sélectionner un fournisseur
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Choisissez le fournisseur pour lequel vous allez saisir les produits. 
+                    Ce fournisseur sera automatiquement associé à tous les produits que vous ajouterez.
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="fournisseur" class="form-label">Fournisseur</label>
+                        <select name="fournisseur" id="fournisseur" class="form-select form-select-lg" required>
+                            <option value="">-- Choisir un fournisseur --</option>
+                            {% for f in fournisseurs %}
+                            <option value="{{ f.pk }}">{{ f.designation }} (Marge: {{ f.marge_beneficiaire }}%)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">
+                            <i class="bi bi-check-circle"></i> Commencer la saisie
+                        </button>
+                        <a href="{% url 'produit_list' %}" class="btn btn-secondary btn-lg">
+                            <i class="bi bi-arrow-left"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+                
+                {% if fournisseurs|length == 0 %}
+                <div class="alert alert-warning mt-4">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Aucun fournisseur n'est enregistré. 
+                    <a href="{% url 'fournisseur_create' %}" class="alert-link">Créer un fournisseur</a> d'abord.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

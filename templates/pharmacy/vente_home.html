@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Ventes - NDOSIPHAR{% endblock %}
+{% block page_title %}Gestion des Ventes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="text-center mb-5">
+            <i class="bi bi-cart3" style="font-size: 4rem; color: #1e8c45;"></i>
+            <h2 class="mt-3">Gestion des Ventes</h2>
+            <p class="text-muted">Choisissez une action pour continuer</p>
+        </div>
+
+        <div class="d-grid gap-3">
+            <!-- Bouton Nouvelle vente -->
+            <a href="{% url 'vente_create' %}" class="btn btn-success btn-lg rounded-pill p-4 text-white text-decoration-none hover-card">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="bi bi-plus-circle" style="font-size: 2.5rem; margin-right: 1rem;"></i>
+                    <div class="text-start">
+                        <h4 class="mb-1">Nouvelle vente</h4>
+                        <p class="mb-0 opacity-75">Enregistrer une nouvelle vente</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Bouton Liste des ventes -->
+            <a href="{% url 'vente_list' %}" class="btn btn-primary btn-lg rounded-pill p-4 text-white text-decoration-none hover-card">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="bi bi-list-ul" style="font-size: 2.5rem; margin-right: 1rem;"></i>
+                    <div class="text-start">
+                        <h4 class="mb-1">Liste des ventes</h4>
+                        <p class="mb-0 opacity-75">Consulter l'historique des ventes</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Bouton Rapport journalier -->
+            <a href="{% url 'rapport_journalier' %}" class="btn btn-outline-dark btn-lg rounded-pill p-4 text-decoration-none hover-card" target="_blank">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="bi bi-file-earmark-pdf" style="font-size: 2.5rem; margin-right: 1rem; color: #dc3545;"></i>
+                    <div class="text-start">
+                        <h4 class="mb-1">Rapport journalier</h4>
+                        <p class="mb-0 text-muted">Imprimer le rapport du jour (PDF)</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Statistiques rapides -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Statistiques du jour</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center g-3">
+                            <div class="col-6 col-md">
+                                <div class="stat-item">
+                                    <h3 class="text-primary">{{ stats.ventes_jour }}</h3>
+                                    <small class="text-muted">Ventes aujourd'hui</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-item">
+                                    <h3 class="text-success">{{ stats.ca_jour|floatformat:0 }} FC</h3>
+                                    <small class="text-muted">CA du jour</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-item">
+                                    <h3 class="text-warning">{{ stats.comptant_jour }}</h3>
+                                    <small class="text-muted">Comptant</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-item">
+                                    <h3 class="text-danger">{{ stats.credit_jour }}</h3>
+                                    <small class="text-muted">Crédit</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-item">
+                                    <h3 class="text-info">{{ stats.ca_mois|floatformat:0 }} FC</h3>
+                                    <small class="text-muted">CA ce mois</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-item">
+                                    <h3 class="text-secondary">{{ stats.total_ventes }}</h3>
+                                    <small class="text-muted">Total ventes</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+}
+
+.stat-item {
+    padding: 1rem;
+}
+
+.stat-item h3 {
+    margin-bottom: 0.25rem;
+    font-weight: bold;
+}
+
+.stat-item small {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+</style>
+{% endblock %}

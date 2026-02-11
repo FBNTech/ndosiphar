@@ -11,9 +11,12 @@
     .vente-card { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; transition: transform 0.2s; }
     .vente-card:hover { transform: translateY(-2px); }
     .vente-card .card-header { background: #fff; font-weight: 700; font-size: 0.95rem; padding: 1rem 1.25rem; border-bottom: 2px solid #f0f0f0; }
-    .produit-selector { background: #f0fdf4; border-radius: 12px; padding: 1rem; border: 2px dashed #86efac; }
-    .produit-selector:focus-within { border-color: #1e8c45; background: #ecfdf5; }
-    .info-bar { background: linear-gradient(90deg, #ecfdf5, #f0fdf4); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    .produit-selector { background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border-radius: 16px; padding: 1.25rem; border: 2px solid #86efac; }
+    .produit-selector:focus-within { border-color: #1e8c45; background: #ecfdf5; box-shadow: 0 0 0 3px rgba(30,140,69,0.1); }
+    .produit-selector input { border-radius: 8px !important; }
+    .info-bar { background: linear-gradient(90deg, #ecfdf5, #f0fdf4); border-radius: 10px; padding: 0.6rem 1.2rem; font-size: 0.85rem; border: 1px solid #d1fae5; }
+    #tableLignes { border-radius: 12px; overflow: hidden; }
+    #tableLignes thead { background: linear-gradient(135deg, #f8fafc, #f1f5f9); }
     #tableLignes tbody tr { transition: all 0.2s; }
     #tableLignes tbody tr:hover { background: #f0fdf4; }
     .btn-enregistrer { background: linear-gradient(135deg, #11998e, #38ef7d); border: none; font-weight: 700; font-size: 1.1rem; padding: 0.8rem; border-radius: 12px; letter-spacing: 0.5px; transition: all 0.3s; }
@@ -23,6 +26,9 @@
     .total-display .amount { font-size: 1.6rem; font-weight: 800; }
     .client-toggle { cursor: pointer; color: #1e8c45; font-weight: 600; font-size: 0.85rem; }
     .client-toggle:hover { text-decoration: underline; }
+    .suggestion-item { cursor: pointer; transition: background-color 0.2s; }
+    .suggestion-item:hover { background-color: #f0f0f0 !important; }
+    .suggestion-item:last-child { border-bottom: none !important; }
 </style>
 {% endblock %}
 
@@ -31,9 +37,10 @@
     {% csrf_token %}
     <input type="hidden" name="lignes_json" id="lignes_json" value="[]">
     <input type="hidden" name="observation" value="">
-
+    
+    
     <div class="row g-4">
-        <!-- Colonne gauche: Client + Type -->
+        <!-- Colonne gauche: Client + Type + Mode paiement -->
         <div class="col-lg-4">
             <div class="vente-card card mb-3">
                 <div class="card-header">
@@ -54,12 +61,24 @@
                 </div>
             </div>
 
-            <div class="vente-card card">
+            <div class="vente-card card mb-3">
                 <div class="card-header">
                     <i class="bi bi-receipt-cutoff text-primary"></i> Type de Vente
                 </div>
                 <div class="card-body p-3">
                     {{ form.type_vente }}
+                </div>
+            </div>
+
+            <div class="vente-card card">
+                <div class="card-header">
+                    <i class="bi bi-credit-card text-primary"></i> Mode de paiement
+                </div>
+                <div class="card-body p-3">
+                    {{ form.mode_paiement }}
+                    <div id="creditAlert" class="alert alert-warning mt-2 py-2 d-none" style="font-size: 0.85rem;">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Vente à crédit</strong> — Un client doit être sélectionné.
+                    </div>
                 </div>
             </div>
         </div>
@@ -72,21 +91,18 @@
                     <span class="badge bg-primary rounded-pill" id="compteurLignes">0 article(s)</span>
                 </div>
                 <div class="card-body">
-                    <!-- Sélecteur produit -->
+                    <!-- Sélecteur produit avec autocomplétion -->
                     <div class="produit-selector mb-3">
                         <div class="row g-2 align-items-center">
                             <div class="col-md-5">
-                                <select class="form-select border-0 bg-transparent" id="selectProduit">
-                                    <option value="">-- Choisir un produit --</option>
-                                    {% for p in produits_disponibles %}
-                                    <option value="{{ p.pk }}" data-prix="{{ p.prix_vente }}" data-stock="{{ p.quantite_stock }}" data-nom="{{ p.designation }}">
-                                        {{ p.designation }} ({{ p.quantite_stock }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control border-0 bg-transparent" id="autocompleteProduit" placeholder="🔍 Rechercher un produit..." autocomplete="off">
+                                    <div id="suggestionsList" class="position-absolute w-100 bg-white border rounded shadow-sm" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none;"></div>
+                                </div>
+                                <input type="hidden" id="produitSelectionne" value="">
                             </div>
                             <div class="col-md-2">
-                                <input type="number" class="form-control border-0 bg-transparent" id="inputQuantite" placeholder="Qté" min="1">
+                                <input type="number" class="form-control border-0 bg-transparent" id="inputQuantite" placeholder="Qté" min="1" autocomplete="off">
                             </div>
                             <div class="col-md-3">
                                 <span class="fw-bold text-primary" id="prixAffiche">0,00 FC</span>
@@ -148,10 +164,21 @@
 </form>
 
 <script>
+// Charger les lignes existantes si en mode édition
+{% if lignes_json %}
+let lignes = JSON.parse('{{ lignes_json|safe }}');
+{% else %}
 let lignes = [];
+{% endif %}
 let nouveauClientVisible = false;
+let produitActuel = null;
 
-const selectProduit = document.getElementById('selectProduit');
+// Données des produits pour l'autocomplétion
+const produitsData = JSON.parse('{{ produits_json|safe }}');
+
+const autocompleteProduit = document.getElementById('autocompleteProduit');
+const suggestionsList = document.getElementById('suggestionsList');
+const produitSelectionne = document.getElementById('produitSelectionne');
 const inputQuantite = document.getElementById('inputQuantite');
 const prixAffiche = document.getElementById('prixAffiche');
 const infoStock = document.getElementById('infoStock');
@@ -176,78 +203,143 @@ function toggleNouveauClient() {
     }
 }
 
-selectProduit.addEventListener('change', function() {
-    const opt = this.options[this.selectedIndex];
-    if (this.value) {
-        const prix = parseFloat(opt.dataset.prix);
-        const stock = parseInt(opt.dataset.stock);
+// Autocomplétion des produits
+autocompleteProduit.addEventListener('input', function() {
+    const terme = this.value.toLowerCase().trim();
+    
+    if (terme.length < 2) {
+        suggestionsList.style.display = 'none';
+        return;
+    }
+    
+    const suggestions = produitsData.filter(p => 
+        p.recherche.includes(terme) && p.stock > 0
+    );
+    
+    if (suggestions.length > 0) {
+        suggestionsList.innerHTML = suggestions.map(p => `
+            <div class="suggestion-item p-2 border-bottom" 
+                 onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                 onmouseout="this.style.backgroundColor='white'"
+                 onclick="selectionnerProduit(${p.id})">
+                <div class="fw-bold">${p.nom}</div>
+                <small class="text-muted">Stock: ${p.stock} | Prix: ${formatMontant(p.prix)} FC</small>
+            </div>
+        `).join('');
+        suggestionsList.style.display = 'block';
+    } else {
+        suggestionsList.innerHTML = '<div class="p-2 text-muted">Aucun produit trouvé</div>';
+        suggestionsList.style.display = 'block';
+    }
+});
+
+function selectionnerProduit(produitId) {
+    const produit = produitsData.find(p => p.id === produitId);
+    if (produit) {
+        produitActuel = produit;
+        produitSelectionne.value = produitId;
+        autocompleteProduit.value = produit.nom;
+        suggestionsList.style.display = 'none';
+        
+        // Afficher les infos du produit
         infoStock.style.display = 'flex';
-        stockDispo.textContent = stock;
-        prixUnit.textContent = formatMontant(prix) + ' FC';
-        inputQuantite.max = stock;
+        stockDispo.textContent = produit.stock;
+        prixUnit.textContent = formatMontant(produit.prix) + ' FC';
+        inputQuantite.max = produit.stock;
         inputQuantite.value = '';
         inputQuantite.focus();
-        prixAffiche.textContent = '0,00 FC';
-    } else {
-        infoStock.style.display = 'none';
-        prixAffiche.textContent = '0,00 FC';
+    }
+}
+
+// Cacher les suggestions en cliquant ailleurs
+document.addEventListener('click', function(e) {
+    if (!autocompleteProduit.contains(e.target) && !suggestionsList.contains(e.target)) {
+        suggestionsList.style.display = 'none';
+    }
+});
+
+autocompleteProduit.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const firstSuggestion = suggestionsList.querySelector('.suggestion-item');
+        if (firstSuggestion) {
+            firstSuggestion.click();
+        }
     }
 });
 
 inputQuantite.addEventListener('input', function() {
-    const opt = selectProduit.options[selectProduit.selectedIndex];
-    if (selectProduit.value && this.value) {
-        const prix = parseFloat(opt.dataset.prix);
-        const montant = prix * parseInt(this.value);
-        prixAffiche.textContent = formatMontant(montant) + ' FC';
+    if (produitActuel && this.value && parseInt(this.value) > 0) {
+        const total = produitActuel.prix * parseInt(this.value);
+        prixAffiche.textContent = formatMontant(total) + ' FC';
     } else {
         prixAffiche.textContent = '0,00 FC';
     }
 });
 
-inputQuantite.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); ajouterLigne(); }
-});
-
 function ajouterLigne() {
-    const opt = selectProduit.options[selectProduit.selectedIndex];
-    if (!selectProduit.value || !inputQuantite.value) {
-        alert('Sélectionnez un produit et entrez la quantité.');
+    const quantite = parseInt(inputQuantite.value);
+    
+    if (!produitActuel || !quantite || quantite <= 0) {
+        alert('Veuillez sélectionner un produit et une quantité valide.');
         return;
     }
-    const produitId = parseInt(selectProduit.value);
-    const qte = parseInt(inputQuantite.value);
-    const stock = parseInt(opt.dataset.stock);
-    const nom = opt.dataset.nom;
-    const prix = parseFloat(opt.dataset.prix);
-
-    if (qte <= 0) { alert('La quantité doit être supérieure à 0.'); return; }
-    if (qte > stock) { alert('Stock insuffisant ! Disponible: ' + stock); return; }
-
-    const existe = lignes.findIndex(l => l.produit_id === produitId);
-    if (existe >= 0) {
-        const newQte = lignes[existe].quantite + qte;
-        if (newQte > stock) { alert('Stock insuffisant ! Disponible: ' + stock); return; }
-        lignes[existe].quantite = newQte;
-        lignes[existe].montant = newQte * prix;
-    } else {
-        lignes.push({ produit_id: produitId, nom: nom, quantite: qte, prix_unitaire: prix, montant: qte * prix });
+    
+    if (quantite > produitActuel.stock) {
+        alert('Stock insuffisant! Disponible: ' + produitActuel.stock);
+        return;
     }
-
-    selectProduit.value = '';
+    
+    lignes.push({
+        produit_id: produitActuel.id,
+        nom: produitActuel.nom,
+        quantite: quantite,
+        stock_max: produitActuel.stock,
+        prix_unitaire: produitActuel.prix,
+        montant_ligne: produitActuel.prix * quantite
+    });
+    
+    actualiserTableau();
+    
+    // Réinitialiser les champs
+    produitActuel = null;
+    produitSelectionne.value = '';
+    autocompleteProduit.value = '';
     inputQuantite.value = '';
     prixAffiche.textContent = '0,00 FC';
     infoStock.style.display = 'none';
-    selectProduit.focus();
-    rafraichirTableau();
+    autocompleteProduit.focus();
 }
 
 function supprimerLigne(index) {
     lignes.splice(index, 1);
-    rafraichirTableau();
+    actualiserTableau();
 }
 
-function rafraichirTableau() {
+function modifierQuantite(index, nouvelleQuantite) {
+    const quantite = parseInt(nouvelleQuantite);
+    const ligne = lignes[index];
+    
+    if (!quantite || quantite <= 0) {
+        alert('La quantité doit être supérieure à 0.');
+        actualiserTableau(); // Réinitialiser l'affichage
+        return;
+    }
+    
+    if (quantite > ligne.stock_max) {
+        alert('Stock insuffisant! Disponible: ' + ligne.stock_max);
+        actualiserTableau(); // Réinitialiser l'affichage
+        return;
+    }
+    
+    // Mettre à jour la quantité et le montant
+    ligne.quantite = quantite;
+    ligne.montant_ligne = ligne.prix_unitaire * quantite;
+    
+    actualiserTableau();
+}
+
+function actualiserTableau() {
     const tbody = document.getElementById('tbodyLignes');
     const totalBlock = document.getElementById('totalBlock');
 
@@ -261,14 +353,24 @@ function rafraichirTableau() {
     } else {
         let total = 0;
         lignes.forEach((l, i) => {
-            total += l.montant;
+            total += l.montant_ligne;
             tbody.innerHTML += `
                 <tr>
                     <td><strong>${l.nom}</strong></td>
-                    <td class="text-center"><span class="badge bg-primary rounded-pill px-3">${l.quantite}</span></td>
+                    <td class="text-center">
+                        <input type="number" 
+                               class="form-control form-control-sm text-center" 
+                               style="width: 80px; display: inline-block;" 
+                               value="${l.quantite}" 
+                               min="1" 
+                               max="${l.stock_max || 999}"
+                               onchange="modifierQuantite(${i}, this.value)">
+                    </td>
                     <td class="text-end text-muted">${formatMontant(l.prix_unitaire)} FC</td>
-                    <td class="text-end"><strong>${formatMontant(l.montant)} FC</strong></td>
-                    <td class="text-end"><button type="button" class="btn btn-sm text-danger border-0" onclick="supprimerLigne(${i})"><i class="bi bi-trash3"></i></button></td>
+                    <td class="text-end"><strong>${formatMontant(l.montant_ligne)} FC</strong></td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm text-danger border-0" onclick="supprimerLigne(${i})"><i class="bi bi-trash3"></i></button>
+                    </td>
                 </tr>`;
         });
         totalBlock.style.display = 'block';
@@ -302,14 +404,46 @@ document.getElementById('venteForm').addEventListener('submit', function(e) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            window.open(data.facture_url, '_blank');
-            window.location.href = data.detail_url;
+            // Ouvrir la facture PDF dans un nouvel onglet
+            const factureWindow = window.open(data.facture_url, '_blank');
+            // Rediriger vers la page de détails après un court délai
+            setTimeout(() => {
+                window.location.href = data.detail_url;
+            }, 500);
         }
     })
     .catch(() => {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-printer"></i> Imprimer la Facture';
     });
+});
+
+// Gestion du mode de paiement (crédit)
+const modePaiement = document.getElementById('id_mode_paiement');
+const creditAlert = document.getElementById('creditAlert');
+
+if (modePaiement) {
+    modePaiement.addEventListener('change', function() {
+        if (this.value === 'credit') {
+            creditAlert.classList.remove('d-none');
+            // Vérifier qu'un client est sélectionné
+            const clientSelect = document.getElementById('id_client');
+            if (!clientSelect.value && !nouveauClientVisible) {
+                clientSelect.focus();
+            }
+        } else {
+            creditAlert.classList.add('d-none');
+        }
+    });
+    // État initial
+    if (modePaiement.value === 'credit') {
+        creditAlert.classList.remove('d-none');
+    }
+}
+
+// Initialiser le tableau au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    actualiserTableau();
 });
 </script>
 {% endblock %}

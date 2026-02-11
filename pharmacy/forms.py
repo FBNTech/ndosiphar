@@ -1,17 +1,24 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Categorie, Fournisseur, Produit, Client, Vente, LigneVente
+from .models import Taux, Fournisseur, Produit, Client, Vente, LigneVente
 
 
-class CategorieForm(forms.ModelForm):
+class TauxForm(forms.ModelForm):
     class Meta:
-        model = Categorie
-        fields = ['designation']
+        model = Taux
+        fields = ['code_devise', 'montant_fc']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['designation'].widget.attrs['placeholder'] = 'Désignation Catégorie'
-        self.fields['designation'].label = ''
+        placeholders = {
+            'code_devise': 'Code Devise (ex: USD, EUR)',
+            'montant_fc': 'Montant en FC',
+        }
+        for field, ph in placeholders.items():
+            self.fields[field].widget.attrs['placeholder'] = ph
+            self.fields[field].widget.attrs['class'] = 'form-control'
+            self.fields[field].label = ''
+            self.fields[field].initial = None
 
 
 class FournisseurForm(forms.ModelForm):
@@ -33,14 +40,15 @@ class FournisseurForm(forms.ModelForm):
 
 class ProduitForm(forms.ModelForm):
     date_expiration = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        label=''
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label='',
+        required=False
     )
 
     class Meta:
         model = Produit
         fields = ['designation', 'prix_achat', 'quantite_stock', 'quantite_alerte',
-                  'jours_alerte_expiration', 'fournisseur', 'date_expiration', 'categorie']
+                  'jours_alerte_expiration', 'fournisseur', 'date_expiration']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -52,14 +60,18 @@ class ProduitForm(forms.ModelForm):
             'jours_alerte_expiration': 'Alerte Expiration (jours avant)',
         }
         for field, ph in placeholders.items():
-            self.fields[field].widget = forms.NumberInput(attrs={'placeholder': ph}) if isinstance(self.fields[field].widget, forms.NumberInput) else self.fields[field].widget
-            self.fields[field].widget.attrs['placeholder'] = ph
+            if field != 'date_expiration':
+                self.fields[field].widget = forms.NumberInput(attrs={'placeholder': ph, 'class': 'form-control'}) if isinstance(self.fields[field].widget, forms.NumberInput) else self.fields[field].widget
+                self.fields[field].widget.attrs['placeholder'] = ph
+                self.fields[field].widget.attrs['class'] = 'form-control'
             self.fields[field].label = ''
-            self.fields[field].initial = None
-        for field in ['fournisseur', 'categorie', 'date_expiration']:
-            self.fields[field].label = ''
-        self.fields['fournisseur'].empty_label = '-- Fournisseur --'
-        self.fields['categorie'].empty_label = '-- Catégorie --'
+            if field != 'date_expiration':
+                self.fields[field].initial = None
+        for field in ['fournisseur', 'date_expiration']:
+            if field in self.fields:
+                self.fields[field].label = ''
+        if 'fournisseur' in self.fields:
+            self.fields['fournisseur'].empty_label = '-- Fournisseur --'
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -120,7 +132,7 @@ class VenteCompletForm(forms.ModelForm):
 
     class Meta:
         model = Vente
-        fields = ['client', 'type_vente', 'observation']
+        fields = ['client', 'type_vente', 'mode_paiement', 'observation']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -133,6 +145,8 @@ class VenteCompletForm(forms.ModelForm):
             c for c in self.fields['type_vente'].choices if c[0] != ''
         ]
         self.fields['type_vente'].widget.attrs.update({'class': 'form-select'})
+        self.fields['mode_paiement'].label = ''
+        self.fields['mode_paiement'].widget.attrs.update({'class': 'form-select'})
         self.fields['observation'].label = ''
         self.fields['observation'].widget.attrs['placeholder'] = 'Observation (optionnel)'
         for f in ['nouveau_client_nom', 'nouveau_client_telephone', 'nouveau_client_adresse']:

@@ -3,6 +3,28 @@
 {% block page_title %}Gestion des Clients{% endblock %}
 
 {% block content %}
+<!-- Statistiques Clients -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-primary mb-0">{{ stats.total_clients }}</h3>
+            <small class="text-muted text-uppercase">Total clients</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-success mb-0">{{ stats.clients_actifs }}</h3>
+            <small class="text-muted text-uppercase">Clients actifs</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-info mb-0">{{ stats.total_ca_clients|floatformat:0 }} FC</h3>
+            <small class="text-muted text-uppercase">CA total clients</small>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-people"></i> Liste des Clients</span>
@@ -29,11 +51,11 @@
                 <tbody>
                     {% for c in clients %}
                     <tr>
-                        <td>{{ c.code_client }}</td>
-                        <td><strong>{{ c.nom }}</strong></td>
-                        <td>{{ c.telephone|default:"-" }}</td>
-                        <td>{{ c.adresse|default:"-" }}</td>
-                        <td>
+                        <td data-label="Code">{{ c.code_client }}</td>
+                        <td data-label="Nom"><strong>{{ c.nom }}</strong></td>
+                        <td data-label="Téléphone">{{ c.telephone|default:"-" }}</td>
+                        <td data-label="Adresse">{{ c.adresse|default:"-" }}</td>
+                        <td data-label="Actions">
                             {% if not request.user.is_vendeur %}
                             <a href="{% url 'client_edit' c.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
                             <a href="{% url 'client_delete' c.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>

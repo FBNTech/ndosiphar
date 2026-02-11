@@ -17,19 +17,27 @@
             </div>
         </div>
     </div>
+    {% if request.user.is_admin or request.user.is_gestionnaire %}
     <div class="col-md-4 col-lg">
         <div class="card stat-card green">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="text-muted mb-1">Catégories</h6>
-                        <h3 class="mb-0">{{ total_categories }}</h3>
+                        <h6 class="text-muted mb-1">Taux de change</h6>
+                        {% if dernier_taux %}
+                            <h3 class="mb-0">{{ dernier_taux.montant_fc|floatformat:0 }} FC</h3>
+                            <small class="text-muted">1 {{ dernier_taux.code_devise }}</small>
+                        {% else %}
+                            <h3 class="mb-0">--</h3>
+                            <small class="text-muted">Aucun taux</small>
+                        {% endif %}
                     </div>
-                    <div class="text-success"><i class="bi bi-tags" style="font-size: 2rem;"></i></div>
+                    <div class="text-success"><i class="bi bi-currency-exchange" style="font-size: 2rem;"></i></div>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
     <div class="col-md-4 col-lg">
         <div class="card stat-card orange">
             <div class="card-body">

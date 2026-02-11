@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}Ventes à Crédit - NDOSIPHAR{% endblock %}
+{% block page_title %}Gestion des Crédits{% endblock %}
+
+{% block content %}
+<!-- Résumé -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <h3 class="text-danger">{{ ventes_credit|length }}</h3>
+                <small class="text-muted">Factures impayées</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <h3 class="text-warning">{{ total_impaye|floatformat:2 }} FC</h3>
+                <small class="text-muted">Total impayé</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <h3 class="text-success">{{ ventes_soldees|length }}</h3>
+                <small class="text-muted">Crédits soldés</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Factures impayées -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-exclamation-triangle text-danger"></i> Factures à crédit non soldées</span>
+        <span class="badge bg-danger rounded-pill">{{ ventes_credit|length }}</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>N°</th>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th class="text-end">Montant Total</th>
+                        <th class="text-end">Payé</th>
+                        <th class="text-end">Reste</th>
+                        <th>Progression</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventes_credit %}
+                    <tr>
+                        <td data-label="N°"><strong>{{ v.code_vente }}</strong></td>
+                        <td data-label="Date">{{ v.date_vente|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Client">{{ v.client|default:"Client Anonyme" }}</td>
+                        <td data-label="Total" class="text-end">{{ v.montant_total|floatformat:2 }} FC</td>
+                        <td data-label="Payé" class="text-end text-success">{{ v.montant_paye|floatformat:2 }} FC</td>
+                        <td data-label="Reste" class="text-end text-danger fw-bold">{{ v.montant_total|floatformat:2 }} FC</td>
+                        <td data-label="Progression">
+                            {% widthratio v.montant_paye v.montant_total 100 as pct %}
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ pct }}%</small>
+                        </td>
+                        <td data-label="Actions">
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'vente_detail' v.pk %}" class="btn btn-outline-primary btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
+                                <a href="{% url 'facture_pdf' v.pk %}" class="btn btn-outline-success btn-sm" title="Facture" target="_blank"><i class="bi bi-printer"></i></a>
+                                {% if not request.user.is_vendeur %}
+                                <button type="button" class="btn btn-outline-warning btn-sm" title="Payer" 
+                                        data-bs-toggle="modal" data-bs-target="#payerModal{{ v.pk }}">
+                                    <i class="bi bi-cash-coin"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Modal de paiement -->
+                    {% if not request.user.is_vendeur %}
+                    <div class="modal fade" id="payerModal{{ v.pk }}" tabindex="-1">
+                        <div class="modal-dialog modal-sm">
+                            <div class="modal-content">
+                                <form method="post" action="{% url 'vente_credit_payer' v.pk %}">
+                                    {% csrf_token %}
+                                    <div class="modal-header">
+                                        <h6 class="modal-title"><i class="bi bi-cash-coin"></i> Paiement - Vente #{{ v.code_vente }}</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-2"><strong>Client :</strong> {{ v.client|default:"Anonyme" }}</p>
+                                        <p class="mb-2"><strong>Total :</strong> {{ v.montant_total|floatformat:2 }} FC</p>
+                                        <p class="mb-2"><strong>Déjà payé :</strong> {{ v.montant_paye|floatformat:2 }} FC</p>
+                                        <p class="mb-3 text-danger"><strong>Reste :</strong> {{ v.montant_total|floatformat:2 }} FC</p>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold">Montant à payer</label>
+                                            <input type="number" name="montant" class="form-control" step="0.01" min="0.01" required placeholder="Montant en FC">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                                        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">
+                        <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-0">Aucune facture à crédit en cours</p>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Crédits soldés -->
+{% if ventes_soldees %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-check-circle text-success"></i> Crédits récemment soldés
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>N°</th>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th class="text-end">Montant</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventes_soldees %}
+                    <tr>
+                        <td data-label="N°">{{ v.code_vente }}</td>
+                        <td data-label="Date">{{ v.date_vente|date:"d/m/Y" }}</td>
+                        <td data-label="Client">{{ v.client|default:"Anonyme" }}</td>
+                        <td data-label="Montant" class="text-end"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                        <td data-label="Actions">
+                            <a href="{% url 'vente_detail' v.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -2,28 +2,374 @@
 {% block title %}Produits - NDOSIPHAR{% endblock %}
 {% block page_title %}Gestion des Produits{% endblock %}
 
+{% block extra_css %}
+<style>
+#id_fournisseur {
+    border: 2px solid #e3f2fd;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+#id_fournisseur:focus {
+    border-color: #1e8c45;
+    background: #ffffff;
+    box-shadow: 0 0 0 0.2rem rgba(30,140,69,0.15);
+    transform: translateY(-1px);
+}
+
+#id_fournisseur:disabled {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+.fournisseur-highlight {
+    position: relative;
+}
+
+.fournisseur-highlight::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #1e8c45, #38ef7d);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#id_fournisseur:focus + .fournisseur-highlight::after {
+    opacity: 1;
+}
+
+/* Styles pour les alertes de produits */
+.alerte-expiration {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.alerte-stock {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 20px;
+    margin-bottom: 5px;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    margin-right: 6px;
+    border: 1px solid #dee2e6;
+}
+
+/* Styles pour la recherche */
+#rechercheProduit {
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+#rechercheProduit:focus {
+    border-color: #1e8c45;
+    box-shadow: 0 0 0 0.2rem rgba(30,140,69,0.15);
+}
+
+.search-suggestion {
+    padding: 0.75rem 1rem;
+    border: 1px solid #e9ecef;
+    border-top: none;
+    background: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.search-suggestion:hover {
+    background-color: #f8f9fa;
+}
+
+.search-suggestion.active {
+    background-color: #e3f2fd;
+    border-color: #1e8c45;
+}
+
+.search-suggestion .produit-code {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.search-suggestion .produit-stock {
+    font-size: 0.85rem;
+}
+
+.search-highlight {
+    background-color: #fff3cd;
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+.table-row-hidden {
+    display: none !important;
+}
+
+.table-row-matched {
+    display: table-row !important;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== RESPONSIVE PRODUIT ===== */
+@media (max-width: 768px) {
+    .row.g-2.mb-3 > .col { flex: 0 0 33.33%; max-width: 33.33%; }
+    .row.g-2.mb-3 > .col h4 { font-size: 1.1rem; }
+    .row.g-2.mb-3 > .col small { font-size: .6rem; }
+    .col-lg-3 { flex: 0 0 100%; max-width: 100%; }
+    .col-lg-9 { flex: 0 0 100%; max-width: 100%; }
+    .table-responsive table.table tbody td[data-label="Qté Init."] { display: none; }
+}
+@media (max-width: 480px) {
+    .row.g-2.mb-3 > .col { flex: 0 0 50%; max-width: 50%; }
+    .row.g-2.mb-3 > .col:nth-child(n+4) { margin-top: 0.5rem; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-box-seam"></i> Liste des Produits</span>
-        <div class="d-flex gap-1">
-            {% if request.user.is_admin %}
-            <a href="{% url 'export_produits' %}" class="btn btn-success btn-sm"><i class="bi bi-download"></i> Export</a>
-            <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('importProduit').click()"><i class="bi bi-upload"></i> Import</button>
-            {% endif %}
-            {% if not request.user.is_vendeur %}
-            <a href="{% url 'produit_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nouveau Produit</a>
-            {% endif %}
+<!-- Statistiques Produits -->
+<div class="row g-2 mb-3">
+    <div class="col">
+        <div class="card border-0 shadow-sm text-center py-2 px-1" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
+            <h4 class="mb-0 text-primary">{{ stats.total }}</h4>
+            <small class="text-muted fw-bold" style="font-size:.7rem;">TOTAL PRODUITS</small>
         </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+    <div class="col">
+        <div class="card border-0 shadow-sm text-center py-2 px-1" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
+            <h4 class="mb-0 text-success">{{ stats.phatkin }}</h4>
+            <small class="text-muted fw-bold" style="font-size:.7rem;">PHATKIN</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm text-center py-2 px-1" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
+            <h4 class="mb-0 text-warning">{{ stats.autres }}</h4>
+            <small class="text-muted fw-bold" style="font-size:.7rem;">AUTRES</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm text-center py-2 px-1" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7);">
+            <h4 class="mb-0" style="color:#7b1fa2;">{{ stats.stock_total }}</h4>
+            <small class="text-muted fw-bold" style="font-size:.7rem;">STOCK TOTAL</small>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm text-center py-2 px-1" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
+            <h4 class="mb-0 text-danger">{{ stats.en_alerte }}</h4>
+            <small class="text-muted fw-bold" style="font-size:.7rem;">EN ALERTE</small>
+        </div>
+    </div>
+</div>
+
+{% if fournisseur_actuel %}
+<div class="alert alert-info mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-truck"></i> 
+            <strong>Fournisseur sélectionné :</strong> {{ fournisseur_actuel }}
+            <small class="text-muted ms-2">(conserve pour la saisie rapide)</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-warning" onclick="resetFournisseur()">
+            <i class="bi bi-x-circle"></i> Réinitialiser
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Formulaire à gauche -->
+    {% if not request.user.is_vendeur %}
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-box-seam"></i> Saisie Rapide</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'produit_list' %}">
+                    {% csrf_token %}
+                    
+                    <!-- Combo fournisseur en première position avec style moderne -->
+                    <div class="mb-3 fournisseur-highlight">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="bi bi-truck"></i> Fournisseur
+                        </label>
+                        {{ form.fournisseur }}
+                        {% if form.fournisseur.errors %}
+                        <div class="text-danger small mt-1">{{ form.fournisseur.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        {{ form.designation }}
+                        {% if form.designation.errors %}
+                        <div class="text-danger small mt-1">{{ form.designation.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        {{ form.prix_achat }}
+                        {% if form.prix_achat.errors %}
+                        <div class="text-danger small mt-1">{{ form.prix_achat.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Aperçu calcul prix de vente -->
+                    <div id="prixVentePreview" class="mb-2 p-2 rounded bg-light border" style="display:none; font-size: 0.82rem;">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Marge:</span>
+                            <strong id="previewMarge">0%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Prix USD:</span>
+                            <strong id="previewUSD" class="text-primary">0.00 $</strong>
+                        </div>
+                        <div class="d-flex justify-content-between border-top pt-1 mt-1">
+                            <span class="text-muted">Prix vente FC:</span>
+                            <strong id="previewPrixVente" class="text-success">0 FC</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                {{ form.quantite_stock }}
+                                {% if form.quantite_stock.errors %}
+                                <div class="text-danger small mt-1">{{ form.quantite_stock.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                {{ form.quantite_alerte }}
+                                {% if form.quantite_alerte.errors %}
+                                <div class="text-danger small mt-1">{{ form.quantite_alerte.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        {{ form.jours_alerte_expiration }}
+                        {% if form.jours_alerte_expiration.errors %}
+                        <div class="text-danger small mt-1">{{ form.jours_alerte_expiration.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        {{ form.date_expiration }}
+                        {% if form.date_expiration.errors %}
+                        <div class="text-danger small mt-1">{{ form.date_expiration.errors.0 }}</div>
+                        {% endif %}
+                        <small class="text-muted">Optionnel</small>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg"></i> Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tableau à droite -->
+    <div class="{% if not request.user.is_vendeur %}col-lg-9{% else %}col-lg-12{% endif %}">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-box-seam"></i> Liste des Produits</span>
+                <div class="d-flex gap-1">
+                    {% if request.user.is_admin %}
+                    <a href="{% url 'export_produits' %}" class="btn btn-success btn-sm"><i class="bi bi-download"></i> Export</a>
+                    <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('importProduit').click()"><i class="bi bi-upload"></i> Import</button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Légende des alertes -->
+            <div class="card-body py-2 bg-light">
+                <div class="d-flex flex-wrap align-items-center">
+                    <small class="text-muted fw-bold me-3">Légende des alertes :</small>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color alerte-stock"></div>
+                        <small class="text-muted">Stock bas</small>
+                        <small class="text-muted ms-1">(≤ seuil)</small>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color alerte-expiration"></div>
+                        <small class="text-muted">Expiration</small>
+                        <small class="text-muted ms-1">(expiré/proche)</small>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color bg-success"></div>
+                        <small class="text-muted">Stock OK</small>
+                        <small class="text-muted ms-1">(suffisant)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Champ de recherche rapide -->
+            <div class="card-body py-3 border-bottom">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" 
+                                   id="rechercheProduit" 
+                                   class="form-control border-start-0" 
+                                   placeholder="Rechercher un produit par désignation, fournisseur ou code..."
+                                   autocomplete="off">
+                            <button class="btn btn-outline-secondary border-0" type="button" id="btnClearSearch" title="Effacer">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                        <div id="searchResults" class="position-absolute w-100 mt-1" style="z-index: 1000; max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                        <small class="text-muted">
+                            <span id="resultCount">0</span> produit(s) trouvé(s)
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="table-responsive">
+            <table id="produitsTable" class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Code</th>
                         <th>Désignation</th>
-                        <th>Catégorie</th>
                         <th>Fournisseur</th>
                         <th>Prix Achat</th>
                         <th>Prix Vente</th>
@@ -35,22 +381,21 @@
                 </thead>
                 <tbody>
                     {% for p in produits %}
-                    <tr class="{% if p.est_expire %}table-danger{% elif p.expiration_alerte %}table-warning{% elif p.stock_alerte %}table-warning{% endif %}">
-                        <td>{{ p.code_produit }}</td>
-                        <td><strong>{{ p.designation }}</strong></td>
-                        <td>{{ p.categorie.designation }}</td>
-                        <td>{{ p.fournisseur.designation }}</td>
-                        <td>{{ p.prix_achat|floatformat:2 }} FC</td>
-                        <td><strong>{{ p.prix_vente|floatformat:2 }} FC</strong></td>
-                        <td><span class="badge bg-secondary">{{ p.quantite_initiale }}</span></td>
-                        <td>
+                    <tr class="{% if p.est_expire %}table-danger{% elif p.expiration_alerte %}table-danger{% elif p.stock_alerte %}table-warning{% endif %}">
+                        <td data-label="Code">{{ p.code_produit }}</td>
+                        <td data-label="Désignation"><strong>{{ p.designation }}</strong></td>
+                        <td data-label="Fournisseur">{{ p.fournisseur.designation }}</td>
+                        <td data-label="Prix Achat">{{ p.prix_achat|floatformat:2 }} FC</td>
+                        <td data-label="Prix Vente"><strong>{{ p.prix_vente|floatformat:2 }} FC</strong></td>
+                        <td data-label="Qté Init."><span class="badge bg-secondary">{{ p.quantite_initiale }}</span></td>
+                        <td data-label="Stock">
                             {% if p.stock_alerte %}
                             <span class="badge bg-danger">{{ p.quantite_stock }}</span>
                             {% else %}
                             <span class="badge bg-success">{{ p.quantite_stock }}</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Expiration">
                             {{ p.date_expiration|date:"d/m/Y" }}
                             {% if p.est_expire %}
                             <span class="badge bg-danger">Expiré</span>
@@ -58,7 +403,10 @@
                             <span class="badge bg-warning text-dark">{{ p.jours_avant_expiration }}j</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Actions">
+                            {% if request.user.is_admin or request.user.is_gestionnaire %}
+                            <a href="{% url 'produit_detail' p.pk %}" class="btn btn-outline-secondary btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
+                            {% endif %}
                             {% if not request.user.is_vendeur %}
                             <a href="{% url 'produit_edit' p.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
                             <a href="{% url 'produit_delete' p.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
@@ -66,17 +414,362 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="11" class="text-center text-muted">Aucun produit trouvé.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted">Aucun produit trouvé.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if request.user.is_admin %}
 <form method="post" action="{% url 'import_produits' %}" enctype="multipart/form-data" style="display:none;">
     {% csrf_token %}
     <input type="file" id="importProduit" name="fichier_excel" accept=".xlsx" onchange="this.form.submit()">
 </form>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fournisseurSelect = document.getElementById('id_fournisseur');
+    const saisieForm = fournisseurSelect ? fournisseurSelect.closest('form') : null;
+    const formInputs = saisieForm ? saisieForm.querySelectorAll('input:not([type="hidden"]), select, button[type="submit"]') : [];
+    const submitButton = saisieForm ? saisieForm.querySelector('button[type="submit"]') : null;
+    
+    function toggleFormState() {
+        const hasFournisseur = fournisseurSelect && fournisseurSelect.value;
+        
+        formInputs.forEach(input => {
+            if (input.id !== 'id_fournisseur') {
+                input.disabled = !hasFournisseur;
+            }
+        });
+        
+        if (submitButton) {
+            submitButton.disabled = !hasFournisseur;
+            if (hasFournisseur) {
+                submitButton.innerHTML = '<i class="bi bi-check-lg"></i> Ajouter';
+                submitButton.classList.remove('btn-secondary');
+                submitButton.classList.add('btn-primary');
+            } else {
+                submitButton.innerHTML = '<i class="bi bi-truck"></i> Choisissez un fournisseur';
+                submitButton.classList.remove('btn-primary');
+                submitButton.classList.add('btn-secondary');
+            }
+        }
+    }
+    
+    // Écouter les changements sur le select du fournisseur
+    if (fournisseurSelect) {
+        fournisseurSelect.addEventListener('change', toggleFormState);
+        // État initial
+        toggleFormState();
+    }
+});
+
+// Fonction pour réinitialiser le fournisseur
+function resetFournisseur() {
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser le fournisseur sélectionné ?')) {
+        // Effacer le fournisseur en session via AJAX
+        fetch('/produits/reset-fournisseur/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Réinitialiser le formulaire
+                const fournisseurSelect = document.getElementById('id_fournisseur');
+                if (fournisseurSelect) {
+                    fournisseurSelect.value = '';
+                    fournisseurSelect.dispatchEvent(new Event('change'));
+                }
+                // Recharger la page pour mettre à jour l'alerte
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            // En cas d'erreur, recharger la page
+            location.reload();
+        });
+    }
+}
+
+// ============ CALCUL AUTOMATIQUE PRIX DE VENTE ============
+const fournisseursMarges = JSON.parse('{{ fournisseurs_marges_json|safe }}');
+const tauxUSD = {{ taux_usd }};
+
+function calculerPrixVente() {
+    const fournisseurSelect = document.getElementById('id_fournisseur');
+    const prixAchatInput = document.getElementById('id_prix_achat');
+    const preview = document.getElementById('prixVentePreview');
+    
+    if (!fournisseurSelect || !prixAchatInput || !preview) return;
+    
+    const fournisseurId = fournisseurSelect.value;
+    const prixAchat = parseFloat(prixAchatInput.value) || 0;
+    
+    if (fournisseurId && prixAchat > 0 && tauxUSD > 0) {
+        const marge = fournisseursMarges[fournisseurId] || 0;
+        const prixAvecMarge = prixAchat * (1 + marge / 100);
+        const prixUSD = prixAvecMarge / tauxUSD;
+        const prixVenteFC = prixUSD * tauxUSD;
+        
+        document.getElementById('previewMarge').textContent = marge + '%';
+        document.getElementById('previewUSD').textContent = prixUSD.toFixed(4) + ' $';
+        document.getElementById('previewPrixVente').textContent = prixVenteFC.toFixed(2) + ' FC';
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Écouter les changements sur prix_achat et fournisseur
+document.addEventListener('DOMContentLoaded', function() {
+    const prixAchatInput = document.getElementById('id_prix_achat');
+    const fournisseurSelect = document.getElementById('id_fournisseur');
+    
+    if (prixAchatInput) {
+        prixAchatInput.addEventListener('input', calculerPrixVente);
+    }
+    if (fournisseurSelect) {
+        fournisseurSelect.addEventListener('change', calculerPrixVente);
+    }
+    // Calcul initial si valeurs déjà présentes
+    calculerPrixVente();
+});
+
+// ============ SYSTÈME DE RECHERCHE RAPIDE ============
+class ProduitSearch {
+    constructor() {
+        this.searchInput = document.getElementById('rechercheProduit');
+        this.searchResults = document.getElementById('searchResults');
+        this.resultCount = document.getElementById('resultCount');
+        this.clearBtn = document.getElementById('btnClearSearch');
+        this.tableRows = document.querySelectorAll('#produitsTable tbody tr');
+        this.produits = [];
+        
+        this.init();
+    }
+    
+    init() {
+        // Extraire les données des produits du tableau
+        this.tableRows.forEach((row, index) => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 3) {
+                this.produits.push({
+                    index: index,
+                    code: cells[0].textContent.trim(),
+                    designation: cells[1].textContent.trim(),
+                    fournisseur: cells[2].textContent.trim(),
+                    element: row
+                });
+            }
+        });
+        
+        // Écouteurs d'événements
+        this.searchInput.addEventListener('input', (e) => this.handleSearch(e.target.value));
+        this.searchInput.addEventListener('focus', () => this.handleSearch(this.searchInput.value));
+        this.clearBtn.addEventListener('click', () => this.clearSearch());
+        
+        // Fermer les résultats en cliquant ailleurs
+        document.addEventListener('click', (e) => {
+            if (!this.searchInput.contains(e.target) && !this.searchResults.contains(e.target)) {
+                this.hideResults();
+            }
+        });
+        
+        // Navigation au clavier
+        this.searchInput.addEventListener('keydown', (e) => this.handleKeyNavigation(e));
+        
+        // Compteur initial
+        this.updateResultCount(this.produits.length);
+    }
+    
+    handleSearch(query) {
+        const terme = query.toLowerCase().trim();
+        
+        if (terme.length < 2) {
+            this.hideResults();
+            this.filterTable('');
+            return;
+        }
+        
+        // Rechercher des correspondances
+        const matches = this.produits.filter(produit => {
+            return produit.code.toLowerCase().includes(terme) ||
+                   produit.designation.toLowerCase().includes(terme) ||
+                   produit.fournisseur.toLowerCase().includes(terme);
+        });
+        
+        // Afficher les suggestions
+        this.showResults(matches, terme);
+        
+        // Filtrer le tableau
+        this.filterTable(terme);
+    }
+    
+    showResults(matches, terme) {
+        if (matches.length === 0) {
+            this.searchResults.innerHTML = `
+                <div class="search-suggestion text-muted text-center py-3">
+                    <i class="bi bi-search"></i> Aucun produit trouvé
+                </div>
+            `;
+        } else {
+            const html = matches.slice(0, 10).map(produit => {
+                const highlightedDesignation = this.highlightText(produit.designation, terme);
+                const highlightedFournisseur = this.highlightText(produit.fournisseur, terme);
+                
+                return `
+                    <div class="search-suggestion fade-in" data-index="${produit.index}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>${highlightedDesignation}</strong>
+                                <div class="produit-code">${produit.code}</div>
+                                <small class="text-muted">${highlightedFournisseur}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            this.searchResults.innerHTML = html;
+            
+            // Ajouter les écouteurs de clic
+            this.searchResults.querySelectorAll('.search-suggestion').forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.dataset.index);
+                    this.selectProduit(index);
+                });
+            });
+        }
+        
+        this.searchResults.style.display = 'block';
+        this.searchResults.classList.add('shadow', 'border', 'rounded');
+    }
+    
+    hideResults() {
+        this.searchResults.style.display = 'none';
+        this.searchResults.classList.remove('shadow', 'border', 'rounded');
+    }
+    
+    highlightText(text, terme) {
+        if (!terme) return text;
+        const regex = new RegExp(`(${terme})`, 'gi');
+        return text.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+    
+    filterTable(terme) {
+        let visibleCount = 0;
+        
+        this.produits.forEach(produit => {
+            const match = !terme || 
+                produit.code.toLowerCase().includes(terme) ||
+                produit.designation.toLowerCase().includes(terme) ||
+                produit.fournisseur.toLowerCase().includes(terme);
+            
+            if (match) {
+                produit.element.classList.remove('table-row-hidden');
+                produit.element.classList.add('table-row-matched', 'fade-in');
+                visibleCount++;
+            } else {
+                produit.element.classList.add('table-row-hidden');
+                produit.element.classList.remove('table-row-matched');
+            }
+        });
+        
+        this.updateResultCount(visibleCount);
+    }
+    
+    updateResultCount(count) {
+        this.resultCount.textContent = count;
+        if (count === 0) {
+            this.resultCount.classList.add('text-danger');
+        } else {
+            this.resultCount.classList.remove('text-danger');
+        }
+    }
+    
+    selectProduit(index) {
+        const produit = this.produits[index];
+        
+        // Faire défiler jusqu'au produit
+        produit.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Mettre en évidence temporairement
+        produit.element.style.backgroundColor = '#fff3cd';
+        setTimeout(() => {
+            produit.element.style.backgroundColor = '';
+        }, 2000);
+        
+        // Vider la recherche
+        this.clearSearch();
+    }
+    
+    clearSearch() {
+        this.searchInput.value = '';
+        this.hideResults();
+        this.filterTable('');
+        this.searchInput.focus();
+    }
+    
+    handleKeyNavigation(e) {
+        const suggestions = this.searchResults.querySelectorAll('.search-suggestion');
+        if (suggestions.length === 0) return;
+        
+        let currentIndex = -1;
+        suggestions.forEach((item, index) => {
+            if (item.classList.contains('active')) {
+                currentIndex = index;
+            }
+        });
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                currentIndex = Math.min(currentIndex + 1, suggestions.length - 1);
+                this.updateActiveSuggestion(suggestions, currentIndex);
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                currentIndex = Math.max(currentIndex - 1, 0);
+                this.updateActiveSuggestion(suggestions, currentIndex);
+                break;
+                
+            case 'Enter':
+                e.preventDefault();
+                if (currentIndex >= 0) {
+                    const index = parseInt(suggestions[currentIndex].dataset.index);
+                    this.selectProduit(index);
+                }
+                break;
+                
+            case 'Escape':
+                this.hideResults();
+                break;
+        }
+    }
+    
+    updateActiveSuggestion(suggestions, activeIndex) {
+        suggestions.forEach((item, index) => {
+            item.classList.toggle('active', index === activeIndex);
+        });
+    }
+}
+
+// Initialiser la recherche au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    new ProduitSearch();
+});
+</script>
 {% endblock %}

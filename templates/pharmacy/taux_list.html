@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Taux de change - NDOSIPHAR{% endblock %}
+{% block page_title %}Taux de change{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-currency-exchange text-primary"></i> Taux de change
+    </h4>
+    {% if not request.user.is_vendeur %}
+    <a href="{% url 'taux_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nouveau taux
+    </a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if taux %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Code Devise</th>
+                        <th>Montant en FC</th>
+                        <th>Dernière mise à jour</th>
+                        {% if not request.user.is_vendeur %}<th>Actions</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in taux %}
+                    <tr>
+                        <td data-label="Devise"><strong>{{ t.code_devise }}</strong></td>
+                        <td data-label="Montant FC" class="text-primary fw-bold">{{ t.montant_fc|floatformat:2 }} FC</td>
+                        <td data-label="Mise à jour">
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> 
+                                {{ t.date_mise_a_jour|date:"d/m/Y H:i" }}
+                            </small>
+                        </td>
+                        {% if not request.user.is_vendeur %}
+                        <td data-label="Actions">
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'taux_edit' t.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'taux_delete' t.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-currency-exchange text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Aucun taux de change enregistré</h5>
+            <p class="text-muted">Commencez par ajouter votre premier taux de change.</p>
+            {% if not request.user.is_vendeur %}
+            <a href="{% url 'taux_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Ajouter un taux
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

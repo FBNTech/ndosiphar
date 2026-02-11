@@ -6,7 +6,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion - NDOSIPHAR</title>
-    <link rel="icon" type="image/svg+xml" href="{% static 'img/logo.svg' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}?v=2">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/logo.png' %}?v=2">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,7 +16,7 @@
         body {
             background: linear-gradient(135deg, #0f3d1e 0%, #1e8c45 50%, #14532d 100%);
             min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            font-family: 'Inter', 'Segoe UI', sans-serif; padding: 1rem;
+            font-family: 'Inter', 'Segoe UI', sans-serif; margin: 0; padding: 0;
             -webkit-font-smoothing: antialiased;
         }
         body::before {
@@ -24,24 +25,57 @@
                         radial-gradient(circle at 70% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
             pointer-events: none;
         }
-        .login-card {
-            background: #fff; border-radius: 20px; padding: 2.5rem;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1);
-            width: 100%; max-width: 420px; position: relative;
+        .login-wrapper {
+            display: flex; width: 100%; max-width: 900px; min-height: 520px;
+            border-radius: 24px; overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
             animation: slideUp 0.5s cubic-bezier(.4,0,.2,1);
+            margin: 1rem;
         }
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .login-card h3 { font-weight: 800; color: #14532d; font-size: 1.6rem; }
-        .login-card .subtitle { color: #6c757d; font-size: 0.88rem; }
-        .login-card .form-control {
+        .login-left {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: linear-gradient(160deg, #14532d 0%, #1e8c45 60%, #22c55e 100%);
+            padding: 2.5rem; position: relative; overflow: hidden;
+        }
+        .login-left::before {
+            content: ''; position: absolute; top: -50%; right: -50%;
+            width: 100%; height: 100%; border-radius: 50%;
+            background: rgba(255,255,255,0.04);
+        }
+        .login-left::after {
+            content: ''; position: absolute; bottom: -30%; left: -30%;
+            width: 80%; height: 80%; border-radius: 50%;
+            background: rgba(255,255,255,0.03);
+        }
+        .login-left img {
+            height: 180px; margin-bottom: 1.5rem; position: relative; z-index: 1;
+            filter: drop-shadow(0 8px 24px rgba(0,0,0,0.3));
+            background: #fff; border-radius: 20px; padding: 12px;
+        }
+        .login-left h2 {
+            color: #fff; font-weight: 800; font-size: 1.8rem; margin: 0;
+            position: relative; z-index: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .login-left p {
+            color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 0.3rem;
+            position: relative; z-index: 1;
+        }
+        .login-right {
+            flex: 1; background: #fff; padding: 2.5rem;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .login-right h3 { font-weight: 800; color: #14532d; font-size: 1.5rem; margin-bottom: 0.2rem; }
+        .login-right .subtitle { color: #6c757d; font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .login-right .form-control {
             border-radius: 10px; border: 1.5px solid #dee2e6;
             padding: 0.6rem 0.9rem; font-size: 0.9rem;
             transition: all 0.3s;
         }
-        .login-card .form-control:focus {
+        .login-right .form-control:focus {
             border-color: #1e8c45; box-shadow: 0 0 0 3px rgba(30,140,69,0.12);
         }
         .btn-login {
@@ -54,36 +88,48 @@
             box-shadow: 0 8px 20px rgba(30,140,69,0.35);
         }
         .alert { border-radius: 12px; border: none; font-size: 0.88rem; }
-        @media (max-width: 480px) {
-            .login-card { padding: 1.8rem 1.5rem; border-radius: 16px; }
-            .login-card h3 { font-size: 1.4rem; }
+        @media (max-width: 768px) {
+            .login-wrapper { flex-direction: column; max-width: 420px; min-height: auto; }
+            .login-left { padding: 2rem 1.5rem; }
+            .login-left img { height: 100px; padding: 8px; border-radius: 14px; margin-bottom: 0.8rem; }
+            .login-left h2 { font-size: 1.4rem; }
+            .login-left p { font-size: 0.8rem; }
+            .login-right { padding: 1.8rem 1.5rem; }
+            .login-right h3 { font-size: 1.3rem; }
         }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="text-center mb-4">
-            <img src="{% static 'img/logo.svg' %}" alt="NDOSIPHAR" style="height: 55px;">
-            <h3 class="mt-2">NDOSIPHAR</h3>
-            <p class="subtitle">Système de Gestion de Pharmacie</p>
+    <div class="login-wrapper">
+        <!-- Logo à gauche -->
+        <div class="login-left">
+            <img src="{% static 'img/logo.png' %}" alt="NDOSIPHAR">
+            <h2>NDOSIPHAR</h2>
+            <p>Pharmacie - Vente en Gros et au Détail</p>
         </div>
 
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
+        <!-- Formulaire à droite -->
+        <div class="login-right">
+            <h3><i class="bi bi-shield-lock"></i> Connexion</h3>
+            <p class="subtitle">Connectez-vous pour accéder au système</p>
 
-        <form method="post">
-            {% csrf_token %}
-            {{ form|crispy }}
-            <button type="submit" class="btn btn-login w-100 mt-3 py-2">
-                <i class="bi bi-box-arrow-in-right"></i> Se connecter
-            </button>
-        </form>
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-login w-100 mt-3 py-2">
+                    <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                </button>
+            </form>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

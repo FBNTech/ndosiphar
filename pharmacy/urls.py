@@ -5,11 +5,11 @@ from . import excel_views
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
 
-    # Catégories
-    path('categories/', views.categorie_list, name='categorie_list'),
-    path('categories/nouveau/', views.categorie_create, name='categorie_create'),
-    path('categories/<int:pk>/modifier/', views.categorie_edit, name='categorie_edit'),
-    path('categories/<int:pk>/supprimer/', views.categorie_delete, name='categorie_delete'),
+    # Taux
+    path('taux/', views.taux_list, name='taux_list'),
+    path('taux/nouveau/', views.taux_create, name='taux_create'),
+    path('taux/<int:pk>/modifier/', views.taux_edit, name='taux_edit'),
+    path('taux/<int:pk>/supprimer/', views.taux_delete, name='taux_delete'),
 
     # Fournisseurs
     path('fournisseurs/', views.fournisseur_list, name='fournisseur_list'),
@@ -19,7 +19,8 @@ urlpatterns = [
 
     # Produits
     path('produits/', views.produit_list, name='produit_list'),
-    path('produits/nouveau/', views.produit_create, name='produit_create'),
+    path('produits/reset-fournisseur/', views.produit_reset_fournisseur, name='produit_reset_fournisseur'),
+    path('produits/<int:pk>/', views.produit_detail, name='produit_detail'),
     path('produits/<int:pk>/modifier/', views.produit_edit, name='produit_edit'),
     path('produits/<int:pk>/supprimer/', views.produit_delete, name='produit_delete'),
 
@@ -33,17 +34,23 @@ urlpatterns = [
     path('api/produit/<int:pk>/', views.api_produit_info, name='api_produit_info'),
 
     # Ventes
-    path('ventes/', views.vente_list, name='vente_list'),
+    path('ventes/', views.vente_home, name='vente_home'),
+    path('ventes/liste/', views.vente_list, name='vente_list'),
     path('ventes/nouveau/', views.vente_create, name='vente_create'),
+    path('ventes/credits/', views.vente_credit_list, name='vente_credit_list'),
+    path('ventes/<int:pk>/payer/', views.vente_credit_payer, name='vente_credit_payer'),
+    path('ventes/<int:pk>/modifier/', views.vente_edit, name='vente_edit'),
     path('ventes/<int:pk>/', views.vente_detail, name='vente_detail'),
     path('ventes/<int:pk>/ajouter-ligne/', views.vente_add_ligne, name='vente_add_ligne'),
     path('ventes/<int:pk>/supprimer-ligne/<int:ligne_pk>/', views.vente_remove_ligne, name='vente_remove_ligne'),
     path('ventes/<int:pk>/supprimer/', views.vente_delete, name='vente_delete'),
     path('ventes/<int:pk>/facture/', views.facture_pdf, name='facture_pdf'),
+    path('ventes/rapport-journalier/', views.rapport_journalier_pdf, name='rapport_journalier'),
+    
+    # Analyse
+    path('analyse-clients/', views.analyse_clients, name='analyse_clients'),
 
     # Export/Import Excel (admin)
-    path('categories/export/', excel_views.export_categories, name='export_categories'),
-    path('categories/import/', excel_views.import_categories, name='import_categories'),
     path('fournisseurs/export/', excel_views.export_fournisseurs, name='export_fournisseurs'),
     path('fournisseurs/import/', excel_views.import_fournisseurs, name='import_fournisseurs'),
     path('produits/export/', excel_views.export_produits, name='export_produits'),

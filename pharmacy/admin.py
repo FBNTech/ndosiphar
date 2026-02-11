@@ -1,11 +1,12 @@
 from django.contrib import admin
-from .models import Categorie, Fournisseur, Produit, Client, Vente, LigneVente
+from .models import Taux, Fournisseur, Produit, Client, Vente, LigneVente
 
 
-@admin.register(Categorie)
-class CategorieAdmin(admin.ModelAdmin):
-    list_display = ('code_categorie', 'designation')
-    search_fields = ('designation',)
+@admin.register(Taux)
+class TauxAdmin(admin.ModelAdmin):
+    list_display = ('code_devise', 'montant_fc', 'date_mise_a_jour')
+    search_fields = ('code_devise',)
+    list_filter = ('date_mise_a_jour',)
 
 
 @admin.register(Fournisseur)
@@ -16,8 +17,8 @@ class FournisseurAdmin(admin.ModelAdmin):
 
 @admin.register(Produit)
 class ProduitAdmin(admin.ModelAdmin):
-    list_display = ('code_produit', 'designation', 'prix_achat', 'prix_vente', 'quantite_stock', 'categorie', 'fournisseur')
-    list_filter = ('categorie', 'fournisseur')
+    list_display = ('code_produit', 'designation', 'prix_achat', 'prix_vente', 'quantite_stock', 'fournisseur')
+    list_filter = ('fournisseur',)
     search_fields = ('designation',)
 
 

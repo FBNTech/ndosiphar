@@ -31,3 +31,9 @@ desktop.ini
 
 # Environment variables
 .env
+
+# Data exports
+data*.json
+
+# Original logo
+logopharmaciendosi.png

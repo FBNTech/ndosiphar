@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from .models import Categorie, Fournisseur, Produit, Client, Vente, LigneVente
+from .models import Fournisseur, Produit, Client, Vente, LigneVente
 
 
 def admin_required(view_func):
@@ -64,19 +64,6 @@ def make_response(wb, filename):
 # ===================== EXPORTS =====================
 
 @admin_required
-def export_categories(request):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = 'Catégories'
-    ws.append(['Code', 'Désignation'])
-    style_header(ws, 2)
-    for c in Categorie.objects.all():
-        ws.append([c.code_categorie, c.designation])
-    auto_width(ws)
-    return make_response(wb, 'categories.xlsx')
-
-
-@admin_required
 def export_fournisseurs(request):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -95,15 +82,15 @@ def export_produits(request):
     ws = wb.active
     ws.title = 'Produits'
     ws.append(['Code', 'Désignation', 'Prix Achat', 'Qté Initiale', 'Qté Stock',
-               'Qté Alerte', 'Jours Alerte Exp.', 'Fournisseur', 'Date Expiration', 'Catégorie', 'Prix Vente'])
-    style_header(ws, 11)
-    for p in Produit.objects.select_related('fournisseur', 'categorie').all():
+               'Qté Alerte', 'Jours Alerte Exp.', 'Fournisseur', 'Date Expiration', 'Prix Vente'])
+    style_header(ws, 10)
+    for p in Produit.objects.select_related('fournisseur').all():
         ws.append([
             p.code_produit, p.designation, float(p.prix_achat),
             p.quantite_initiale, p.quantite_stock, p.quantite_alerte,
             p.jours_alerte_expiration, p.fournisseur.designation,
             p.date_expiration.strftime('%d/%m/%Y') if p.date_expiration else '',
-            p.categorie.designation, float(p.prix_vente)
+            float(p.prix_vente)
         ])
     auto_width(ws)
     return make_response(wb, 'produits.xlsx')
@@ -159,23 +146,6 @@ def export_ventes(request):
 # ===================== IMPORTS =====================
 
 @admin_required
-def import_categories(request):
-    if request.method == 'POST' and request.FILES.get('fichier_excel'):
-        try:
-            wb = openpyxl.load_workbook(request.FILES['fichier_excel'])
-            ws = wb.active
-            count = 0
-            for row in ws.iter_rows(min_row=2, values_only=True):
-                if row[1]:
-                    Categorie.objects.get_or_create(designation=str(row[1]).strip())
-                    count += 1
-            messages.success(request, f"{count} catégorie(s) traitée(s).")
-        except Exception as e:
-            messages.error(request, f"Erreur lors de l'import : {e}")
-    return redirect('categorie_list')
-
-
-@admin_required
 def import_fournisseurs(request):
     if request.method == 'POST' and request.FILES.get('fichier_excel'):
         try:
@@ -215,15 +185,14 @@ def import_produits(request):
                     jours_alerte = int(row[6]) if row[6] else 30
                     fournisseur_nom = str(row[7]).strip() if row[7] else None
                     date_exp_raw = row[8]
-                    categorie_nom = str(row[9]).strip() if row[9] else None
+                    prix_vente = Decimal(str(row[9])) if len(row) > 9 and row[9] else None
 
-                    if not fournisseur_nom or not categorie_nom:
+                    if not fournisseur_nom:
                         errors += 1
                         continue
 
                     fournisseur, _ = Fournisseur.objects.get_or_create(
                         designation=fournisseur_nom, defaults={'marge_beneficiaire': 0})
-                    categorie, _ = Categorie.objects.get_or_create(designation=categorie_nom)
 
                     if isinstance(date_exp_raw, datetime):
                         date_exp = date_exp_raw.date()
@@ -250,7 +219,7 @@ def import_produits(request):
                             'jours_alerte_expiration': jours_alerte,
                             'fournisseur': fournisseur,
                             'date_expiration': date_exp,
-                            'categorie': categorie,
+                            'prix_vente': prix_vente or prix_achat * Decimal('1.2'),  # 20% marge par défaut
                         }
                     )
                     count += 1

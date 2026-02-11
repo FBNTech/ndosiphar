@@ -1,0 +1,231 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4 portrait; margin: 1cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 9px; color: #333; margin: 0; padding: 0; }
+        .header { text-align: center; border-bottom: 3px solid #1e8c45; padding-bottom: 8px; margin-bottom: 10px; }
+        .header h1 { margin: 0; color: #1e8c45; font-size: 18px; }
+        .header p { margin: 2px 0; color: #666; font-size: 8px; }
+        .logo-img { height: 55px; margin-bottom: 5px; }
+        .rapport-title { background: #1e8c45; color: white; padding: 6px 12px; font-size: 12px; font-weight: bold; margin: 10px 0 8px; text-align: center; }
+        .info-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; font-size: 9px; }
+        .info-box strong { color: #1e8c45; }
+        
+        .section-title { background: #e8f5e9; padding: 4px 8px; font-size: 10px; font-weight: bold; color: #2e7d32; margin: 10px 0 5px; border-left: 3px solid #1e8c45; }
+        .section-title.danger { background: #fce4ec; color: #c62828; border-left-color: #c62828; }
+        .section-title.warning { background: #fff3e0; color: #e65100; border-left-color: #e65100; }
+        .section-title.info { background: #e3f2fd; color: #1565c0; border-left-color: #1565c0; }
+        
+        table.items { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        table.items th { background: #e8f5e9; border: 1px solid #c8e6c9; padding: 3px 5px; text-align: left; font-size: 7px; color: #2e7d32; text-transform: uppercase; }
+        table.items td { border: 1px solid #dee2e6; padding: 2px 5px; font-size: 8px; }
+        table.items tr:nth-child(even) { background: #f8f9fa; }
+        table.items.credit th { background: #fff3e0; border-color: #ffe0b2; color: #e65100; }
+        table.items.danger th { background: #fce4ec; border-color: #f8bbd0; color: #c62828; }
+        
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        
+        .summary-box { border: 2px solid #1e8c45; border-radius: 6px; padding: 10px; margin: 12px 0; }
+        .summary-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; }
+        .summary-table { width: 100%; font-size: 9px; }
+        .summary-table td { padding: 3px 8px; }
+        .summary-table .label { text-align: right; color: #555; width: 65%; }
+        .summary-table .value { text-align: right; font-weight: bold; }
+        .summary-total { background: #1e8c45; color: white; font-size: 12px; font-weight: bold; padding: 6px 10px; text-align: right; margin-top: 5px; }
+        
+        .signatures { margin-top: 20px; }
+        .signatures table { width: 100%; }
+        .signatures td { width: 50%; text-align: center; font-size: 9px; padding-top: 6px; }
+        .sig-line { border-top: 1px solid #333; width: 70%; margin: 30px auto 3px; }
+        .footer { text-align: center; margin-top: 10px; padding-top: 5px; border-top: 1px solid #dee2e6; color: #999; font-size: 7px; }
+        
+        .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 7px; font-weight: bold; }
+        .badge-success { background: #e8f5e9; color: #2e7d32; }
+        .badge-warning { background: #fff3e0; color: #e65100; }
+        .badge-danger { background: #fce4ec; color: #c62828; }
+        .empty-msg { text-align: center; color: #999; padding: 8px; font-style: italic; font-size: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ logo_data }}" class="logo-img" alt=""><br>
+        <h1>NDOSIPHAR</h1>
+        <p>Pharmacie - Vente en Gros et au Détail</p>
+    </div>
+    
+    <div class="rapport-title">RAPPORT JOURNALIER</div>
+    
+    <div class="info-box">
+        <table style="width:100%; font-size:9px;">
+            <tr>
+                <td><strong>Date :</strong> {{ date_rapport|date:"d/m/Y" }}</td>
+                <td><strong>Vendeur :</strong> {{ vendeur.get_full_name|default:vendeur.username }}</td>
+                <td style="text-align:right;"><strong>Imprimé le :</strong> {{ date_impression|date:"d/m/Y à H:i" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ===== VENTES COMPTANT ===== -->
+    <div class="section-title">
+        <span>VENTES AU COMPTANT</span>
+        <span style="float:right;">{{ ventes_comptant|length }} vente(s)</span>
+    </div>
+    {% if ventes_comptant %}
+    <table class="items">
+        <thead>
+            <tr>
+                <th style="width:8%;">N°</th>
+                <th style="width:18%;">Client</th>
+                <th style="width:8%;">Type</th>
+                <th style="width:36%;">Produits</th>
+                <th style="width:15%;" class="text-right">Montant</th>
+                <th style="width:15%;" class="text-right">Heure</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in ventes_comptant %}
+            <tr>
+                <td>{{ v.code_vente }}</td>
+                <td>{{ v.client|default:"Anonyme" }}</td>
+                <td><span class="badge badge-success">{{ v.get_type_vente_display }}</span></td>
+                <td>
+                    {% for l in v.lignes.all %}
+                    {{ l.produit.designation }} (x{{ l.quantite }}){% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td class="text-right"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                <td class="text-right">{{ v.date_vente|date:"H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-msg">Aucune vente au comptant pour cette journée.</p>
+    {% endif %}
+
+    <!-- ===== VENTES À CRÉDIT ===== -->
+    <div class="section-title warning">
+        <span>VENTES À CRÉDIT</span>
+        <span style="float:right;">{{ ventes_credit|length }} vente(s)</span>
+    </div>
+    {% if ventes_credit %}
+    <table class="items credit">
+        <thead>
+            <tr>
+                <th style="width:8%;">N°</th>
+                <th style="width:20%;">Client</th>
+                <th style="width:8%;">Type</th>
+                <th style="width:34%;">Produits</th>
+                <th style="width:15%;" class="text-right">Montant</th>
+                <th style="width:15%;" class="text-right">Heure</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in ventes_credit %}
+            <tr>
+                <td>{{ v.code_vente }}</td>
+                <td>{{ v.client|default:"Anonyme" }}</td>
+                <td><span class="badge badge-warning">{{ v.get_type_vente_display }}</span></td>
+                <td>
+                    {% for l in v.lignes.all %}
+                    {{ l.produit.designation }} (x{{ l.quantite }}){% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td class="text-right"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                <td class="text-right">{{ v.date_vente|date:"H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-msg">Aucune vente à crédit pour cette journée.</p>
+    {% endif %}
+
+    <!-- ===== ACTIVITÉS / HISTORIQUE ===== -->
+    {% if historiques %}
+    <div class="section-title info">
+        <span>AUTRES ACTIVITÉS (suppressions, modifications, etc.)</span>
+        <span style="float:right;">{{ historiques|length }} action(s)</span>
+    </div>
+    <table class="items danger">
+        <thead>
+            <tr>
+                <th style="width:15%;">Heure</th>
+                <th style="width:15%;">Action</th>
+                <th style="width:15%;">Modèle</th>
+                <th style="width:55%;">Détail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in historiques %}
+            <tr>
+                <td>{{ h.date_action|date:"H:i" }}</td>
+                <td>
+                    <span class="badge {% if h.action == 'suppression' %}badge-danger{% elif h.action == 'modification' %}badge-warning{% else %}badge-success{% endif %}">
+                        {{ h.get_action_display }}
+                    </span>
+                </td>
+                <td>{{ h.modele }}</td>
+                <td>{{ h.detail }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- ===== RÉSUMÉ ===== -->
+    <div class="summary-box">
+        <div style="text-align:center; font-weight:bold; font-size:10px; color:#1e8c45; margin-bottom:6px;">RÉSUMÉ DE LA JOURNÉE</div>
+        <table class="summary-table">
+            <tr>
+                <td class="label">Nombre de ventes au comptant :</td>
+                <td class="value">{{ ventes_comptant|length }}</td>
+            </tr>
+            <tr>
+                <td class="label">Total ventes au comptant :</td>
+                <td class="value">{{ total_comptant|floatformat:2 }} FC</td>
+            </tr>
+            <tr>
+                <td class="label">Nombre de ventes à crédit :</td>
+                <td class="value">{{ ventes_credit|length }}</td>
+            </tr>
+            <tr>
+                <td class="label">Total ventes à crédit :</td>
+                <td class="value">{{ total_credit|floatformat:2 }} FC</td>
+            </tr>
+            {% if historiques %}
+            <tr>
+                <td class="label">Suppressions / Modifications :</td>
+                <td class="value">{{ historiques|length }} action(s)</td>
+            </tr>
+            {% endif %}
+        </table>
+        <div class="summary-total">
+            TOTAL GÉNÉRAL : {{ total_general|floatformat:2 }} FC
+        </div>
+    </div>
+
+    <!-- ===== SIGNATURES ===== -->
+    <div class="signatures">
+        <table><tr>
+            <td>
+                <div class="sig-line"></div>
+                <strong>Le Vendeur</strong><br>
+                <small>{{ vendeur.get_full_name|default:vendeur.username }}</small>
+            </td>
+            <td>
+                <div class="sig-line"></div>
+                <strong>Le Responsable</strong><br>
+                <small>&nbsp;</small>
+            </td>
+        </tr></table>
+    </div>
+
+    <div class="footer">
+        <p>NDOSIPHAR | Rapport journalier du {{ date_rapport|date:"d/m/Y" }} | Généré le {{ date_impression|date:"d/m/Y à H:i" }}</p>
+    </div>
+</body>
+</html>

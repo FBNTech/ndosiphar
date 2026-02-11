@@ -30,10 +30,10 @@
                 <tbody>
                     {% for f in fournisseurs %}
                     <tr>
-                        <td>{{ f.code_fournisseur }}</td>
-                        <td><strong>{{ f.designation }}</strong></td>
-                        <td><span class="badge bg-success">{{ f.marge_beneficiaire }}%</span></td>
-                        <td>
+                        <td data-label="Code">{{ f.code_fournisseur }}</td>
+                        <td data-label="Désignation"><strong>{{ f.designation }}</strong></td>
+                        <td data-label="Marge"><span class="badge bg-success">{{ f.marge_beneficiaire }}%</span></td>
+                        <td data-label="Actions">
                             {% if not request.user.is_vendeur %}
                             <a href="{% url 'fournisseur_edit' f.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
                             <a href="{% url 'fournisseur_delete' f.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>

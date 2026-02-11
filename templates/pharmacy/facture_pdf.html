@@ -12,7 +12,7 @@
         .header { text-align: center; border-bottom: 2px solid #1e8c45; padding-bottom: 5px; margin-bottom: 6px; }
         .header h1 { margin: 0; color: #1e8c45; font-size: 16px; }
         .header p { margin: 1px 0; color: #666; font-size: 7px; }
-        .logo-img { height: 30px; margin-bottom: 3px; }
+        .logo-img { height: 50px; margin-bottom: 5px; }
         .info-section { margin-bottom: 6px; }
         .info-table { width: 100%; }
         .info-table td { padding: 1px 2px; vertical-align: top; font-size: 8px; }
@@ -34,7 +34,7 @@
         .sig-line { border-top: 1px solid #333; width: 80%; margin: 20px auto 2px; }
         .footer { text-align: center; margin-top: 4px; padding-top: 3px; border-top: 1px solid #dee2e6; color: #999; font-size: 6px; }
         .text-right { text-align: right; }
-        .remise-row { color: #dc3545; }
+        .credit-label { color: #dc3545; font-weight: bold; font-size: 9px; }
     </style>
 </head>
 <body>
@@ -42,7 +42,7 @@
         <!-- ===== Exemplaire GAUCHE ===== -->
         <td class="facture-col">
             <div class="header">
-                <img src="file:///{{ logo_path }}" class="logo-img" alt=""><br>
+                <img src="{{ logo_data }}" class="logo-img" alt=""><br>
                 <h1>NDOSIPHAR</h1>
                 <p>Pharmacie - Vente en Gros et au Détail</p>
             </div>
@@ -92,13 +92,7 @@
                 </tbody>
             </table>
             <div class="total-section">
-                <table class="total-table">
-                    <tr><td class="label">Sous-total:</td><td class="value">{{ vente.montant_total|floatformat:2 }} FC</td></tr>
-                    {% if vente.remise_pourcent > 0 %}
-                    <tr class="remise-row"><td class="label">Remise ({{ vente.remise_pourcent }}%):</td><td class="value">-{{ vente.montant_remise|floatformat:2 }} FC</td></tr>
-                    {% endif %}
-                </table>
-                <div class="total-net">NET À PAYER: {{ vente.montant_net|floatformat:2 }} FC</div>
+                <div class="total-net">TOTAL À PAYER: {{ vente.montant_total|floatformat:2 }} FC</div>
             </div>
             <div class="signatures">
                 <table><tr>
@@ -117,7 +111,7 @@
         <!-- ===== Exemplaire DROIT ===== -->
         <td class="facture-col">
             <div class="header">
-                <img src="file:///{{ logo_path }}" class="logo-img" alt=""><br>
+                <img src="{{ logo_data }}" class="logo-img" alt=""><br>
                 <h1>NDOSIPHAR</h1>
                 <p>Pharmacie - Vente en Gros et au Détail</p>
             </div>
@@ -167,13 +161,7 @@
                 </tbody>
             </table>
             <div class="total-section">
-                <table class="total-table">
-                    <tr><td class="label">Sous-total:</td><td class="value">{{ vente.montant_total|floatformat:2 }} FC</td></tr>
-                    {% if vente.remise_pourcent > 0 %}
-                    <tr class="remise-row"><td class="label">Remise ({{ vente.remise_pourcent }}%):</td><td class="value">-{{ vente.montant_remise|floatformat:2 }} FC</td></tr>
-                    {% endif %}
-                </table>
-                <div class="total-net">NET À PAYER: {{ vente.montant_net|floatformat:2 }} FC</div>
+                <div class="total-net">TOTAL À PAYER: {{ vente.montant_total|floatformat:2 }} FC</div>
             </div>
             <div class="signatures">
                 <table><tr>

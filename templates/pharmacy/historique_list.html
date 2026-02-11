@@ -23,8 +23,8 @@
                 <tbody>
                     {% for h in historiques %}
                     <tr>
-                        <td><small class="text-muted">{{ h.date_action|date:"d/m/Y H:i:s" }}</small></td>
-                        <td>
+                        <td data-label="Date"><small class="text-muted">{{ h.date_action|date:"d/m/Y H:i:s" }}</small></td>
+                        <td data-label="Utilisateur">
                             {% if h.utilisateur %}
                             <strong>{{ h.utilisateur.get_full_name|default:h.utilisateur.username }}</strong>
                             <br><small class="text-muted">{{ h.utilisateur.get_role_display }}</small>
@@ -32,7 +32,7 @@
                             <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Action">
                             {% if h.action == 'creation' %}
                             <span class="badge bg-success"><i class="bi bi-plus-circle"></i> Création</span>
                             {% elif h.action == 'modification' %}
@@ -45,8 +45,8 @@
                             <span class="badge bg-secondary">{{ h.get_action_display }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ h.modele|default:"—" }}</td>
-                        <td><small>{{ h.detail|default:"—" }}</small></td>
+                        <td data-label="Module">{{ h.modele|default:"—" }}</td>
+                        <td data-label="Détail"><small>{{ h.detail|default:"—" }}</small></td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="5" class="text-center text-muted">Aucune action enregistrée.</td></tr>

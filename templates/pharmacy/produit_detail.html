@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Détail Produit - NDOSIPHAR{% endblock %}
+{% block page_title %}Détail du Produit{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-box-seam"></i> {{ produit.designation }}</span>
+        <div class="d-flex gap-1">
+            <a href="{% url 'produit_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Retour</a>
+            {% if request.user.is_admin %}
+            <a href="{% url 'produit_edit' produit.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Modifier</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <tbody>
+                            <tr>
+                                <th style="width: 35%;">Code</th>
+                                <td>{{ produit.code_produit }}</td>
+                            </tr>
+                            <tr>
+                                <th>Désignation</th>
+                                <td><strong>{{ produit.designation }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Fournisseur</th>
+                                <td>{{ produit.fournisseur.designation }} ({{ produit.fournisseur.marge_beneficiaire }}%)</td>
+                            </tr>
+                            <tr>
+                                <th>Prix achat</th>
+                                <td>{{ produit.prix_achat|floatformat:2 }} FC</td>
+                            </tr>
+                            <tr>
+                                <th>Prix vente (USD)</th>
+                                <td><strong>{{ produit.prix_vente_usd|floatformat:4 }} $</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Taux USD</th>
+                                <td>
+                                    {% if taux_usd %}
+                                        1 USD = <strong>{{ taux_usd.montant_fc|floatformat:2 }} FC</strong>
+                                        <small class="text-muted ms-2">(maj {{ taux_usd.date_mise_a_jour|date:"d/m/Y H:i" }})</small>
+                                    {% else %}
+                                        <span class="text-danger">Taux USD non défini</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Prix vente (FC)</th>
+                                <td><strong class="text-success">{{ produit.prix_vente|floatformat:2 }} FC</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Quantité initiale</th>
+                                <td>{{ produit.quantite_initiale }}</td>
+                            </tr>
+                            <tr>
+                                <th>Stock</th>
+                                <td>
+                                    {% if produit.stock_alerte %}
+                                    <span class="badge bg-danger">{{ produit.quantite_stock }}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">{{ produit.quantite_stock }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Date expiration</th>
+                                <td>
+                                    {{ produit.date_expiration|date:"d/m/Y" }}
+                                    {% if produit.est_expire %}
+                                    <span class="badge bg-danger ms-2">Expiré</span>
+                                    {% elif produit.expiration_alerte %}
+                                    <span class="badge bg-warning text-dark ms-2">{{ produit.jours_avant_expiration }}j</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="alert alert-info">
+                    <div class="fw-bold mb-1"><i class="bi bi-info-circle"></i> Rappel calcul</div>
+                    <div style="font-size: 0.9rem;">
+                        <div><strong>Prix avec marge</strong> = Prix achat × (1 + marge/100)</div>
+                        <div><strong>Prix USD</strong> = Prix avec marge ÷ taux USD</div>
+                        <div><strong>Prix vente FC</strong> = Prix USD × taux USD</div>
+                    </div>
+                </div>
+                <div class="alert alert-warning mb-0">
+                    <div class="fw-bold mb-1"><i class="bi bi-shield-lock"></i> Accès</div>
+                    <div style="font-size: 0.9rem;">Cette page est réservée à l’administrateur et au gestionnaire.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

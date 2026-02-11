@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% block title %}Analyse des Clients - NDOSIPHAR{% endblock %}
+{% block page_title %}Analyse des Clients{% endblock %}
+
+{% block content %}
+<!-- Cartes de statistiques générales -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Clients actifs</h6>
+                        <h3 class="mb-0">{{ total_clients }}</h3>
+                    </div>
+                    <div style="color:#1e8c45;"><i class="bi bi-people" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Total ventes</h6>
+                        <h3 class="mb-0">{{ total_ventes }}</h3>
+                    </div>
+                    <div class="text-success"><i class="bi bi-cart3" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">CA Total</h6>
+                        <h3 class="mb-0">{{ total_ca|floatformat:0 }} FC</h3>
+                    </div>
+                    <div class="text-warning"><i class="bi bi-cash-stack" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card purple">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="text-muted mb-1">Panier moyen</h6>
+                        <h3 class="mb-0">{% if total_ventes > 0 %}{% widthratio total_ca total_ventes 1 %} FC{% else %}0 FC{% endif %}</h3>
+                    </div>
+                    <div class="text-info"><i class="bi bi-calculator" style="font-size: 2rem;"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Meilleurs clients -->
+{% if meilleur_client or client_fidele %}
+<div class="row g-3 mb-4">
+    {% if meilleur_client %}
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-trophy"></i> Meilleur Client (CA)</h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ meilleur_client.client.nom }}</h6>
+                <p class="mb-1"><strong>Total dépensé:</strong> {{ meilleur_client.total_depense|floatformat:0 }} FC</p>
+                <p class="mb-1"><strong>Nombre d'achats:</strong> {{ meilleur_client.nombre_ventes }}</p>
+                <p class="mb-0"><strong>Panier moyen:</strong> {{ meilleur_client.panier_moyen|floatformat:0 }} FC</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if client_fidele %}
+    <div class="col-md-6">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-star"></i> Client le Plus Fidèle</h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ client_fidele.client.nom }}</h6>
+                <p class="mb-1"><strong>Nombre d'achats:</strong> {{ client_fidele.nombre_ventes }}</p>
+                <p class="mb-1"><strong>Total dépensé:</strong> {{ client_fidele.total_depense|floatformat:0 }} FC</p>
+                <p class="mb-0"><strong>Panier moyen:</strong> {{ client_fidele.panier_moyen|floatformat:0 }} FC</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Tableau détaillé des clients -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-people"></i> Détail des Clients
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if clients_stats %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th class="text-center">Nombre d'achats</th>
+                        <th class="text-end">Total dépensé</th>
+                        <th class="text-end">Panier moyen</th>
+                        <th class="text-center">Premier achat</th>
+                        <th class="text-center">Dernier achat</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in clients_stats %}
+                    <tr>
+                        <td>
+                            <strong>{{ stat.client.nom }}</strong><br>
+                            <small class="text-muted">{{ stat.client.telephone }}</small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-primary">{{ stat.nombre_ventes }}</span>
+                        </td>
+                        <td class="text-end fw-bold text-success">
+                            {{ stat.total_depense|floatformat:0 }} FC
+                        </td>
+                        <td class="text-end">
+                            {{ stat.panier_moyen|floatformat:0 }} FC
+                        </td>
+                        <td class="text-center">
+                            {% if stat.premier_achat %}
+                            <small>{{ stat.premier_achat|date:"d/m/Y" }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if stat.dernier_achat %}
+                            <small>{{ stat.dernier_achat|date:"d/m/Y" }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-info" onclick="toggleDetails({{ forloop.counter0 }})">
+                                <i class="bi bi-eye"></i> Détails
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- Détails produits achetés -->
+                    <tr id="details-{{ forloop.counter0 }}" style="display: none;" class="bg-light">
+                        <td colspan="7">
+                            <div class="p-3">
+                                <h6 class="mb-3">Produits achetés par {{ stat.client.nom }}:</h6>
+                                <div class="row">
+                                    {% for produit, data in stat.produits_achetes.items %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="small">
+                                            <strong>{{ produit }}</strong><br>
+                                            Quantité: {{ data.quantite }} | 
+                                            Montant: {{ data.montant|floatformat:0 }} FC
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">Aucun client avec des achats</h5>
+            <p class="text-muted">Commencez par enregistrer des ventes pour voir l'analyse des clients.</p>
+            <a href="{% url 'vente_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nouvelle vente
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleDetails(index) {
+    const row = document.getElementById('details-' + index);
+    if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+    } else {
+        row.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

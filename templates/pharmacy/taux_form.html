@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - NDOSIPHAR{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-currency-exchange text-primary"></i> {{ title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.code_devise.id_for_label }}" class="form-label">Code Devise</label>
+                        {{ form.code_devise }}
+                        {% if form.code_devise.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.code_devise.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.montant_fc.id_for_label }}" class="form-label">Montant en FC</label>
+                        {{ form.montant_fc }}
+                        {% if form.montant_fc.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.montant_fc.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Enregistrer
+                        </button>
+                        <a href="{% url 'taux_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

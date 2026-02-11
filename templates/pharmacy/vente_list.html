@@ -3,6 +3,40 @@
 {% block page_title %}Gestion des Ventes{% endblock %}
 
 {% block content %}
+<!-- Statistiques Ventes -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-primary mb-0">{{ stats.total_ventes }}</h3>
+            <small class="text-muted text-uppercase">Total ventes</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-success mb-0">{{ stats.ventes_jour }}</h3>
+            <small class="text-muted text-uppercase">Ventes du jour</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-info mb-0">{{ stats.ca_jour|floatformat:0 }} FC</h3>
+            <small class="text-muted text-uppercase">CA du jour</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-warning mb-0">{{ stats.comptant_jour }}</h3>
+            <small class="text-muted text-uppercase">Comptant</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <h3 class="text-danger mb-0">{{ stats.credit_jour }}</h3>
+            <small class="text-muted text-uppercase">Crédit</small>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-cart3"></i> Liste des Ventes</span>
@@ -21,6 +55,7 @@
                         <th>N°</th>
                         <th>Date</th>
                         <th>Client</th>
+                        <th>Produits achetés</th>
                         <th>Type</th>
                         <th>Vendeur</th>
                         <th>Montant Total</th>
@@ -30,14 +65,31 @@
                 <tbody>
                     {% for v in ventes %}
                     <tr>
-                        <td>{{ v.code_vente }}</td>
-                        <td>{{ v.date_vente|date:"d/m/Y H:i" }}</td>
-                        <td>{{ v.client|default:"Client Anonyme" }}</td>
-                        <td><span class="badge bg-{% if v.type_vente == 'gros' %}primary{% else %}info{% endif %}">{{ v.get_type_vente_display }}</span></td>
-                        <td>{{ v.vendeur.get_full_name|default:v.vendeur.username }}</td>
-                        <td><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
-                        <td>
+                        <td data-label="N°">{{ v.code_vente }}</td>
+                        <td data-label="Date">{{ v.date_vente|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Client">{{ v.client|default:"Client Anonyme" }}</td>
+                        <td data-label="Produits">
+                            {% if v.lignes.all %}
+                            <select class="form-select form-select-sm" style="min-width: 200px;">
+                                <option value="">-- {{ v.lignes.all|length }} produit(s) --</option>
+                                {% for ligne in v.lignes.all %}
+                                <option value="{{ ligne.produit.pk }}" disabled>
+                                    {{ ligne.produit.designation }} ({{ ligne.quantite }}) - {{ ligne.montant_ligne|floatformat:0 }} FC
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <span class="text-muted">Aucun produit</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Type"><span class="badge bg-{% if v.type_vente == 'gros' %}primary{% else %}info{% endif %}">{{ v.get_type_vente_display }}</span></td>
+                        <td data-label="Vendeur">{{ v.vendeur.get_full_name|default:v.vendeur.username }}</td>
+                        <td data-label="Montant"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                        <td data-label="Actions">
                             <a href="{% url 'vente_detail' v.pk %}" class="btn btn-outline-primary btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
+                            {% if not request.user.is_vendeur %}
+                            <a href="{% url 'vente_edit' v.pk %}" class="btn btn-outline-warning btn-sm" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            {% endif %}
                             <a href="{% url 'facture_pdf' v.pk %}" class="btn btn-outline-success btn-sm" title="Facture PDF" target="_blank"><i class="bi bi-printer"></i></a>
                             {% if not request.user.is_vendeur %}
                             <a href="{% url 'vente_delete' v.pk %}" class="btn btn-outline-danger btn-sm" title="Supprimer"><i class="bi bi-trash"></i></a>
@@ -45,7 +97,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center text-muted">Aucune vente enregistrée.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted">Aucune vente enregistrée.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
