@@ -1,8 +1,69 @@
 {% extends 'base.html' %}
+{% load l10n %}
 {% block title %}Tableau de bord - NDOSIPHAR{% endblock %}
 {% block page_title %}Tableau de bord{% endblock %}
 
 {% block content %}
+
+<!-- Modal Taux de Change pour Vendeur -->
+{% if afficher_modal_taux %}
+<div class="modal fade" id="modalTaux" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #1e8c45, #14532d);">
+                <h5 class="modal-title"><i class="bi bi-currency-exchange"></i> Taux de Change du Jour</h5>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body px-4 py-4">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-currency-dollar text-success" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                    <p class="text-center text-muted mb-3">
+                        Veuillez vérifier et confirmer le taux de change avant de commencer.
+                    </p>
+                    {% if taux_usd %}
+                    <div class="alert alert-info text-center py-2 mb-3">
+                        <small>Taux actuel :</small>
+                        <strong>1 USD = {{ taux_usd.montant_fc|floatformat:2 }} FC</strong>
+                        <br><small class="text-muted">Dernière MAJ : {{ taux_usd.date_mise_a_jour|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning text-center py-2 mb-3">
+                        <small>Aucun taux de change n'est défini. Veuillez en saisir un.</small>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Taux 1 USD en FC</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light"><i class="bi bi-currency-dollar"></i></span>
+                            {% localize off %}
+                            <input type="number" name="montant_fc" class="form-control" step="0.01" min="0.01"
+                                   value="{{ taux_usd.montant_fc|default:'0' }}" required
+                                   placeholder="Ex: 2800.00" style="font-size: 1.2rem; font-weight: 700;">
+                            {% endlocalize %}
+                            <span class="input-group-text bg-light fw-bold">FC</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
+                    <button type="submit" name="confirmer_taux" value="1" class="btn btn-success btn-lg px-5">
+                        <i class="bi bi-check-circle"></i> Confirmer et Continuer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new bootstrap.Modal(document.getElementById('modalTaux')).show();
+});
+</script>
+{% endif %}
+
 <div class="row g-3 mb-4">
     <div class="col-md-4 col-lg">
         <div class="card stat-card blue">
@@ -17,7 +78,6 @@
             </div>
         </div>
     </div>
-    {% if request.user.is_admin or request.user.is_gestionnaire %}
     <div class="col-md-4 col-lg">
         <div class="card stat-card green">
             <div class="card-body">
@@ -37,7 +97,6 @@
             </div>
         </div>
     </div>
-    {% endif %}
     <div class="col-md-4 col-lg">
         <div class="card stat-card orange">
             <div class="card-body">

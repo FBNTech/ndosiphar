@@ -19,9 +19,11 @@ urlpatterns = [
 
     # Produits
     path('produits/', views.produit_list, name='produit_list'),
+    path('produits/liste-pdf/', views.produits_liste_pdf, name='produits_liste_pdf'),
     path('produits/reset-fournisseur/', views.produit_reset_fournisseur, name='produit_reset_fournisseur'),
     path('produits/<int:pk>/', views.produit_detail, name='produit_detail'),
     path('produits/<int:pk>/modifier/', views.produit_edit, name='produit_edit'),
+    path('produits/<int:pk>/ajouter-stock/', views.produit_ajouter_stock, name='produit_ajouter_stock'),
     path('produits/<int:pk>/supprimer/', views.produit_delete, name='produit_delete'),
 
     # Clients

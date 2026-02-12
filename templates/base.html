@@ -226,11 +226,11 @@
                 <i class="bi bi-speedometer2"></i> Tableau de bord
             </a>
 
-            {% if not request.user.is_vendeur %}
             <div class="nav-section">Gestion Stock</div>
             <a href="{% url 'taux_list' %}" class="nav-link {% if 'taux' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-currency-exchange"></i> Taux de change
             </a>
+            {% if not request.user.is_vendeur %}
             <a href="{% url 'fournisseur_list' %}" class="nav-link {% if 'fournisseur' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-truck"></i> Fournisseurs
             </a>

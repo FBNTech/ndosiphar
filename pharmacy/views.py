@@ -51,13 +51,50 @@ def dashboard(request):
     ventes_mois = Vente.objects.filter(date_vente__date__gte=debut_mois).aggregate(
         total=models.Sum('montant_total'), nombre=models.Count('pk'))
 
+    # Vérifier si le vendeur doit confirmer le taux de change
+    afficher_modal_taux = False
+    taux_usd = None
+    try:
+        taux_usd = Taux.objects.get(code_devise='USD')
+    except Taux.DoesNotExist:
+        pass
+    
+    if request.user.is_vendeur and not request.session.get('taux_confirme_aujourd_hui') == str(aujourd_hui):
+        afficher_modal_taux = True
+    
+    # Si le vendeur confirme/modifie le taux via POST
+    if request.method == 'POST' and 'confirmer_taux' in request.POST:
+        nouveau_taux = request.POST.get('montant_fc')
+        if nouveau_taux:
+            try:
+                nouveau_taux = float(nouveau_taux.replace(',', '.'))
+                if taux_usd:
+                    taux_usd.montant_fc = nouveau_taux
+                    taux_usd.save()
+                else:
+                    taux_usd = Taux.objects.create(code_devise='USD', montant_fc=nouveau_taux)
+                Historique.objects.create(
+                    utilisateur=request.user,
+                    action='modification_taux',
+                    modele='Taux',
+                    detail=f"Taux USD mis à jour à {nouveau_taux} FC par {request.user.username}"
+                )
+                request.session['taux_confirme_aujourd_hui'] = str(aujourd_hui)
+                messages.success(request, f"Taux de change mis à jour : 1 USD = {nouveau_taux} FC")
+            except (ValueError, TypeError):
+                messages.error(request, "Valeur de taux invalide.")
+        else:
+            request.session['taux_confirme_aujourd_hui'] = str(aujourd_hui)
+            messages.info(request, "Taux de change confirmé.")
+        return redirect('dashboard')
+
     context = {
         'total_produits': Produit.objects.count(),
         'total_fournisseurs': Fournisseur.objects.count(),
         'total_clients': Client.objects.count(),
         'total_ventes': Vente.objects.count(),
         'total_taux': Taux.objects.count(),
-        'dernier_taux': Taux.objects.first(),
+        'dernier_taux': taux_usd or Taux.objects.first(),
         'ventes_jour': ventes_jour['total'] or 0,
         'ventes_jour_nombre': ventes_jour['nombre'],
         'ventes_semaine': ventes_semaine['total'] or 0,
@@ -69,6 +106,8 @@ def dashboard(request):
             date_expiration__lte=date.today() + timedelta(days=30)
         ).order_by('date_expiration'),
         'ventes_recentes': Vente.objects.all()[:5],
+        'afficher_modal_taux': afficher_modal_taux,
+        'taux_usd': taux_usd,
     }
     return render(request, 'pharmacy/dashboard.html', context)
 
@@ -96,13 +135,19 @@ def taux_create(request):
     return render(request, 'pharmacy/taux_form.html', {'form': form, 'title': 'Nouveau Taux'})
 
 
-@non_vendeur_required
+@login_required
 def taux_edit(request, pk):
     taux = get_object_or_404(Taux, pk=pk)
     if request.method == 'POST':
         form = TauxForm(request.POST, instance=taux)
         if form.is_valid():
             form.save()
+            Historique.objects.create(
+                utilisateur=request.user,
+                action='modification_taux',
+                modele='Taux',
+                detail=f"Taux {taux.code_devise} modifié à {taux.montant_fc} FC par {request.user.username}"
+            )
             messages.success(request, "Taux modifié avec succès.")
             return redirect('taux_list')
     else:
@@ -264,6 +309,32 @@ def produit_reset_fournisseur(request):
             del request.session['fournisseur_selectionne_nom']
         return JsonResponse({'success': True})
     return JsonResponse({'success': False}, status=400)
+
+
+@non_vendeur_required
+def produit_ajouter_stock(request, pk):
+    """Ajouter une quantité au stock d'un produit existant (cumul)"""
+    produit = get_object_or_404(Produit, pk=pk)
+    if request.method == 'POST':
+        try:
+            quantite = int(request.POST.get('quantite', 0))
+            if quantite > 0:
+                produit.quantite_stock += quantite
+                produit.quantite_initiale += quantite
+                produit.save()
+                Historique.objects.create(
+                    utilisateur=request.user,
+                    action='ajout_stock',
+                    modele='Produit',
+                    detail=f"Ajout de {quantite} unités au stock de {produit.designation} (nouveau stock: {produit.quantite_stock})"
+                )
+                messages.success(request, f"{quantite} unités ajoutées au stock de {produit.designation}. Nouveau stock: {produit.quantite_stock}")
+            else:
+                messages.error(request, "La quantité doit être supérieure à 0.")
+        except (ValueError, TypeError):
+            messages.error(request, "Quantité invalide.")
+        return redirect('produit_list')
+    return redirect('produit_list')
 
 
 @non_vendeur_required
@@ -754,24 +825,49 @@ def vente_delete(request, pk):
     return render(request, 'pharmacy/confirm_delete.html', {'object': vente, 'type': 'Vente'})
 
 
+# ============ LISTE PRODUITS PDF ============
+
+@login_required
+def produits_liste_pdf(request):
+    """Générer un PDF avec la liste de tous les produits en stock"""
+    from django.db.models import Sum
+    
+    produits = Produit.objects.select_related('fournisseur').all().order_by('designation')
+    
+    total_qte_initiale = produits.aggregate(total=Sum('quantite_initiale'))['total'] or 0
+    total_qte_stock = produits.aggregate(total=Sum('quantite_stock'))['total'] or 0
+    
+    template = get_template('pharmacy/produits_liste_pdf.html')
+    context = {
+        'produits': produits,
+        'total_produits': produits.count(),
+        'total_qte_initiale': total_qte_initiale,
+        'total_qte_stock': total_qte_stock,
+        'date_impression': timezone.now(),
+        'utilisateur': request.user.get_full_name() or request.user.username,
+    }
+    html = template.render(context)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'filename="liste_produits.pdf"'
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse("Erreur lors de la génération du PDF", status=500)
+    return response
+
+
 # ============ FACTURE PDF ============
 
 @login_required
 def facture_pdf(request, pk):
-    import os, base64
     vente = get_object_or_404(Vente, pk=pk)
     lignes = vente.lignes.select_related('produit').all()
-    logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png')
-    logo_data = ''
-    if os.path.exists(logo_path):
-        with open(logo_path, 'rb') as f:
-            logo_data = 'data:image/png;base64,' + base64.b64encode(f.read()).decode('utf-8')
+    heure_facture = vente.date_vente.strftime('%H:%M:%S')
     template = get_template('pharmacy/facture_pdf.html')
     context = {
         'vente': vente,
         'lignes': lignes,
-        'date_impression': timezone.now(),
-        'logo_data': logo_data,
+        'date_du_jour': timezone.now(),
+        'heure_facture': heure_facture,
     }
     html = template.render(context)
     response = HttpResponse(content_type='application/pdf')

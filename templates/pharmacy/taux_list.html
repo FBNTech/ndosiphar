@@ -24,7 +24,7 @@
                         <th>Code Devise</th>
                         <th>Montant en FC</th>
                         <th>Dernière mise à jour</th>
-                        {% if not request.user.is_vendeur %}<th>Actions</th>{% endif %}
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,18 +38,18 @@
                                 {{ t.date_mise_a_jour|date:"d/m/Y H:i" }}
                             </small>
                         </td>
-                        {% if not request.user.is_vendeur %}
                         <td data-label="Actions">
                             <div class="btn-group" role="group">
                                 <a href="{% url 'taux_edit' t.pk %}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                {% if not request.user.is_vendeur %}
                                 <a href="{% url 'taux_delete' t.pk %}" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-trash"></i>
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
-                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

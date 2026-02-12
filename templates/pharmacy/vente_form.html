@@ -268,6 +268,13 @@ autocompleteProduit.addEventListener('keydown', function(e) {
     }
 });
 
+inputQuantite.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        ajouterLigne();
+    }
+});
+
 inputQuantite.addEventListener('input', function() {
     if (produitActuel && this.value && parseInt(this.value) > 0) {
         const total = produitActuel.prix * parseInt(this.value);
@@ -404,12 +411,24 @@ document.getElementById('venteForm').addEventListener('submit', function(e) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Ouvrir la facture PDF dans un nouvel onglet
-            const factureWindow = window.open(data.facture_url, '_blank');
-            // Rediriger vers la page de détails après un court délai
-            setTimeout(() => {
-                window.location.href = data.detail_url;
-            }, 500);
+            // Ouvrir la facture dans un iframe caché et lancer l'impression
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = data.facture_url;
+            document.body.appendChild(iframe);
+            iframe.onload = function() {
+                try {
+                    iframe.contentWindow.print();
+                } catch(err) {
+                    // Si blocage cross-origin, ouvrir dans un nouvel onglet
+                    window.open(data.facture_url, '_blank');
+                }
+                // Rediriger après impression
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    window.location.href = data.detail_url;
+                }, 1000);
+            };
         }
     })
     .catch(() => {

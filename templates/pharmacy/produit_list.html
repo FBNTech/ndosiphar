@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 {% block title %}Produits - NDOSIPHAR{% endblock %}
 {% block page_title %}Gestion des Produits{% endblock %}
 
@@ -304,6 +305,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-box-seam"></i> Liste des Produits</span>
                 <div class="d-flex gap-1">
+                    <a href="{% url 'produits_liste_pdf' %}" class="btn btn-outline-danger btn-sm" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Imprimer PDF</a>
                     {% if request.user.is_admin %}
                     <a href="{% url 'export_produits' %}" class="btn btn-success btn-sm"><i class="bi bi-download"></i> Export</a>
                     <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('importProduit').click()"><i class="bi bi-upload"></i> Import</button>
@@ -339,7 +341,7 @@
             <!-- Champ de recherche rapide -->
             <div class="card-body py-3 border-bottom">
                 <div class="row align-items-center">
-                    <div class="col-md-6">
+                    <div class="col-md-6 position-relative">
                         <div class="input-group">
                             <span class="input-group-text bg-light border-0">
                                 <i class="bi bi-search"></i>
@@ -353,7 +355,7 @@
                                 <i class="bi bi-x-circle"></i>
                             </button>
                         </div>
-                        <div id="searchResults" class="position-absolute w-100 mt-1" style="z-index: 1000; max-height: 300px; overflow-y: auto;"></div>
+                        <div id="searchResults" class="position-absolute w-100 mt-1" style="z-index: 1050; max-height: 300px; overflow-y: auto; display: none;"></div>
                     </div>
                     <div class="col-md-6 text-md-end mt-2 mt-md-0">
                         <small class="text-muted">
@@ -408,6 +410,7 @@
                             <a href="{% url 'produit_detail' p.pk %}" class="btn btn-outline-secondary btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
                             {% endif %}
                             {% if not request.user.is_vendeur %}
+                            <button class="btn btn-outline-success btn-sm" title="Ajouter au stock" onclick="ouvrirAjoutStock({{ p.pk }}, '{{ p.designation|escapejs }}', {{ p.quantite_stock }})"><i class="bi bi-plus-circle"></i></button>
                             <a href="{% url 'produit_edit' p.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
                             <a href="{% url 'produit_delete' p.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
                             {% endif %}
@@ -433,7 +436,45 @@
 </form>
 {% endif %}
 
+<!-- Modal Ajout Stock -->
+{% if not request.user.is_vendeur %}
+<div class="modal fade" id="modalAjoutStock" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title"><i class="bi bi-plus-circle"></i> Ajouter au stock</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAjoutStock" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="mb-1 fw-bold" id="stockProduitNom"></p>
+                    <small class="text-muted">Stock actuel : <span id="stockActuel" class="badge bg-secondary">0</span></small>
+                    <div class="mt-3">
+                        <label class="form-label fw-bold">Quantité à ajouter</label>
+                        <input type="number" name="quantite" class="form-control" min="1" value="1" required id="inputQteAjout">
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
+// ============ MODAL AJOUT STOCK ============
+function ouvrirAjoutStock(produitId, produitNom, stockActuel) {
+    document.getElementById('stockProduitNom').textContent = produitNom;
+    document.getElementById('stockActuel').textContent = stockActuel;
+    document.getElementById('inputQteAjout').value = 1;
+    document.getElementById('formAjoutStock').action = '/produits/' + produitId + '/ajouter-stock/';
+    new bootstrap.Modal(document.getElementById('modalAjoutStock')).show();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const fournisseurSelect = document.getElementById('id_fournisseur');
     const saisieForm = fournisseurSelect ? fournisseurSelect.closest('form') : null;
@@ -505,7 +546,9 @@ function resetFournisseur() {
 
 // ============ CALCUL AUTOMATIQUE PRIX DE VENTE ============
 const fournisseursMarges = JSON.parse('{{ fournisseurs_marges_json|safe }}');
+{% localize off %}
 const tauxUSD = {{ taux_usd }};
+{% endlocalize %}
 
 function calculerPrixVente() {
     const fournisseurSelect = document.getElementById('id_fournisseur');
@@ -702,22 +745,32 @@ class ProduitSearch {
     selectProduit(index) {
         const produit = this.produits[index];
         
+        // Mettre la désignation dans le champ de recherche
+        this.searchInput.value = produit.designation;
+        
+        // Masquer toutes les lignes sauf celle sélectionnée
+        this.produits.forEach(p => {
+            if (p.index === index) {
+                p.element.classList.remove('table-row-hidden');
+                p.element.classList.add('table-row-matched', 'fade-in');
+                p.element.style.backgroundColor = '#e8f5e9';
+            } else {
+                p.element.classList.add('table-row-hidden');
+                p.element.classList.remove('table-row-matched');
+            }
+        });
+        
+        this.updateResultCount(1);
+        this.hideResults();
+        
         // Faire défiler jusqu'au produit
         produit.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Mettre en évidence temporairement
-        produit.element.style.backgroundColor = '#fff3cd';
-        setTimeout(() => {
-            produit.element.style.backgroundColor = '';
-        }, 2000);
-        
-        // Vider la recherche
-        this.clearSearch();
     }
     
     clearSearch() {
         this.searchInput.value = '';
         this.hideResults();
+        this.produits.forEach(p => { p.element.style.backgroundColor = ''; });
         this.filterTable('');
         this.searchInput.focus();
     }
