@@ -166,7 +166,7 @@
 <script>
 // Charger les lignes existantes si en mode édition
 {% if lignes_json %}
-let lignes = JSON.parse('{{ lignes_json|safe }}');
+let lignes = JSON.parse("{{ lignes_json|escapejs }}");
 {% else %}
 let lignes = [];
 {% endif %}
@@ -174,7 +174,7 @@ let nouveauClientVisible = false;
 let produitActuel = null;
 
 // Données des produits pour l'autocomplétion
-const produitsData = JSON.parse('{{ produits_json|safe }}');
+const produitsData = JSON.parse("{{ produits_json|escapejs }}");
 
 const autocompleteProduit = document.getElementById('autocompleteProduit');
 const suggestionsList = document.getElementById('suggestionsList');
