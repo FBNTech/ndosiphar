@@ -860,12 +860,24 @@ def produits_liste_pdf(request):
 @login_required
 def facture_pdf(request, pk):
     vente = get_object_or_404(Vente, pk=pk)
-    lignes = vente.lignes.select_related('produit').all()
+    lignes = list(vente.lignes.select_related('produit').all())
     heure_facture = vente.date_vente.strftime('%H:%M:%S')
+    # Paginer les lignes: max 15 articles par page A5
+    LIGNES_PAR_PAGE = 15
+    pages = []
+    for i in range(0, len(lignes), LIGNES_PAR_PAGE):
+        chunk = lignes[i:i + LIGNES_PAR_PAGE]
+        pages.append({
+            'lignes': chunk,
+            'start_num': i + 1,
+        })
+    if not pages:
+        pages = [{'lignes': [], 'start_num': 1}]
     template = get_template('pharmacy/facture_pdf.html')
     context = {
         'vente': vente,
-        'lignes': lignes,
+        'pages': pages,
+        'total_pages': len(pages),
         'date_du_jour': timezone.now(),
         'heure_facture': heure_facture,
     }
