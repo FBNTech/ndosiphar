@@ -61,6 +61,7 @@ urlpatterns = [
     path('clients/import/', excel_views.import_clients, name='import_clients'),
     path('ventes/export/', excel_views.export_ventes, name='export_ventes'),
 
-    # Historique (admin)
+    # Historique
+    path('historique-ventes/', views.historique_ventes, name='historique_ventes'),
     path('historique/', views.historique_list, name='historique_list'),
 ]

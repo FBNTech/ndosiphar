@@ -253,6 +253,9 @@
             <a href="{% url 'analyse_clients' %}" class="nav-link {% if 'analyse' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-graph-up"></i> Analyse Clients
             </a>
+            <a href="{% url 'historique_ventes' %}" class="nav-link {% if request.resolver_match.url_name == 'historique_ventes' %}active{% endif %}">
+                <i class="bi bi-clock-history"></i> Historique des ventes
+            </a>
             {% endif %}
 
             {% if request.user.is_admin %}
@@ -260,9 +263,11 @@
             <a href="{% url 'user_list' %}" class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-person-gear"></i> Utilisateurs
             </a>
-            <a href="{% url 'historique_list' %}" class="nav-link {% if 'historique' in request.resolver_match.url_name %}active{% endif %}">
+            {% if not request.user.is_controleur %}
+            <a href="{% url 'historique_list' %}" class="nav-link {% if request.resolver_match.url_name == 'historique_list' %}active{% endif %}">
                 <i class="bi bi-clock-history"></i> Historique
             </a>
+            {% endif %}
             {% endif %}
         </div>
     </nav>

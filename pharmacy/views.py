@@ -862,8 +862,8 @@ def facture_pdf(request, pk):
     vente = get_object_or_404(Vente, pk=pk)
     lignes = list(vente.lignes.select_related('produit').all())
     heure_facture = vente.date_vente.strftime('%H:%M:%S')
-    # Paginer les lignes: max 15 articles par page A5
-    LIGNES_PAR_PAGE = 15
+    # Paginer les lignes: max 20 articles par page A5
+    LIGNES_PAR_PAGE = 20
     pages = []
     for i in range(0, len(lignes), LIGNES_PAR_PAGE):
         chunk = lignes[i:i + LIGNES_PAR_PAGE]
@@ -972,8 +972,50 @@ def enregistrer_historique(user, action, modele='', detail=''):
 
 
 @login_required
+def historique_ventes(request):
+    """Historique complet de toutes les ventes avec total des montants"""
+    from django.db.models import Sum, Count
+    ventes = Vente.objects.select_related('client', 'vendeur').prefetch_related('lignes__produit').all()
+
+    # Filtres optionnels
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    vendeur_id = request.GET.get('vendeur')
+    mode = request.GET.get('mode')
+
+    if date_debut:
+        ventes = ventes.filter(date_vente__date__gte=date_debut)
+    if date_fin:
+        ventes = ventes.filter(date_vente__date__lte=date_fin)
+    if vendeur_id:
+        ventes = ventes.filter(vendeur_id=vendeur_id)
+    if mode and mode in ('comptant', 'credit'):
+        ventes = ventes.filter(mode_paiement=mode)
+
+    total_montant = ventes.aggregate(total=Sum('montant_total'))['total'] or 0
+    total_comptant = ventes.filter(mode_paiement='comptant').aggregate(total=Sum('montant_total'))['total'] or 0
+    total_credit = ventes.filter(mode_paiement='credit').aggregate(total=Sum('montant_total'))['total'] or 0
+
+    from accounts.models import User
+    vendeurs = User.objects.filter(is_active=True)
+
+    return render(request, 'pharmacy/historique_ventes.html', {
+        'ventes': ventes,
+        'total_montant': total_montant,
+        'total_comptant': total_comptant,
+        'total_credit': total_credit,
+        'nb_ventes': ventes.count(),
+        'vendeurs': vendeurs,
+        'filtre_date_debut': date_debut or '',
+        'filtre_date_fin': date_fin or '',
+        'filtre_vendeur': vendeur_id or '',
+        'filtre_mode': mode or '',
+    })
+
+
+@login_required
 def historique_list(request):
-    if not request.user.is_admin:
+    if not request.user.is_admin and not request.user.is_gestionnaire:
         messages.error(request, "Accès réservé à l'administrateur.")
         return redirect('dashboard')
     historiques = Historique.objects.select_related('utilisateur').all()[:200]

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block title %}Historique des Ventes - NDOSIPHAR{% endblock %}
+{% block page_title %}Historique des Ventes{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .stats-card .amount { font-size: 1.4rem; font-weight: 800; }
+    .filter-bar { background: #f8f9fa; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Totaux -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card text-center p-3">
+            <small class="text-muted text-uppercase">Nombre de ventes</small>
+            <div class="amount text-primary">{{ nb_ventes }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card text-center p-3">
+            <small class="text-muted text-uppercase">Total Général</small>
+            <div class="amount text-success">{{ total_montant|floatformat:2 }} FC</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card text-center p-3">
+            <small class="text-muted text-uppercase">Total Comptant</small>
+            <div class="amount text-info">{{ total_comptant|floatformat:2 }} FC</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card text-center p-3">
+            <small class="text-muted text-uppercase">Total Crédit</small>
+            <div class="amount text-danger">{{ total_credit|floatformat:2 }} FC</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<form method="get" class="filter-bar">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">Date début</label>
+            <input type="date" name="date_debut" class="form-control form-control-sm" value="{{ filtre_date_debut }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">Date fin</label>
+            <input type="date" name="date_fin" class="form-control form-control-sm" value="{{ filtre_date_fin }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">Vendeur</label>
+            <select name="vendeur" class="form-select form-select-sm">
+                <option value="">-- Tous --</option>
+                {% for v in vendeurs %}
+                <option value="{{ v.pk }}" {% if filtre_vendeur == v.pk|stringformat:"d" %}selected{% endif %}>{{ v.get_full_name|default:v.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">Mode</label>
+            <select name="mode" class="form-select form-select-sm">
+                <option value="">-- Tous --</option>
+                <option value="comptant" {% if filtre_mode == "comptant" %}selected{% endif %}>Comptant</option>
+                <option value="credit" {% if filtre_mode == "credit" %}selected{% endif %}>Crédit</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filtrer</button>
+        </div>
+        <div class="col-md-2">
+            <a href="{% url 'historique_ventes' %}" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-x-lg"></i> Réinitialiser</a>
+        </div>
+    </div>
+</form>
+
+<!-- Tableau des ventes -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> Toutes les ventes</span>
+        <span class="badge bg-primary rounded-pill">{{ nb_ventes }} vente(s)</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>N°</th>
+                        <th>Date & Heure</th>
+                        <th>Client</th>
+                        <th>Produits</th>
+                        <th>Mode</th>
+                        <th>Vendeur</th>
+                        <th class="text-end">Montant</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventes %}
+                    <tr>
+                        <td data-label="N°">{{ v.code_vente }}</td>
+                        <td data-label="Date">{{ v.date_vente|date:"d/m/Y H:i:s" }}</td>
+                        <td data-label="Client">{{ v.client|default:"Anonyme" }}</td>
+                        <td data-label="Produits">
+                            {% if v.lignes.all %}
+                            <select class="form-select form-select-sm" style="min-width: 180px;">
+                                <option value="">-- {{ v.lignes.all|length }} produit(s) --</option>
+                                {% for ligne in v.lignes.all %}
+                                <option disabled>{{ ligne.produit.designation }} ({{ ligne.quantite }}) - {{ ligne.montant_ligne|floatformat:0 }} FC</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Mode">
+                            <span class="badge bg-{% if v.mode_paiement == 'comptant' %}success{% else %}warning text-dark{% endif %}">
+                                {{ v.get_mode_paiement_display }}
+                            </span>
+                        </td>
+                        <td data-label="Vendeur">{{ v.vendeur.get_full_name|default:v.vendeur.username }}</td>
+                        <td data-label="Montant" class="text-end"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                        <td data-label="Actions">
+                            <a href="{% url 'vente_detail' v.pk %}" class="btn btn-outline-primary btn-sm" title="Détail"><i class="bi bi-eye"></i></a>
+                            <a href="{% url 'facture_pdf' v.pk %}" class="btn btn-outline-success btn-sm" title="Facture" target="_blank"><i class="bi bi-printer"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">Aucune vente trouvée.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
