@@ -343,7 +343,9 @@ def produit_edit(request, pk):
     if request.method == 'POST':
         form = ProduitForm(request.POST, instance=produit)
         if form.is_valid():
-            form.save()
+            produit = form.save()
+            produit.calculer_prix_vente_usd()
+            produit.save()
             messages.success(request, "Produit modifié avec succès.")
             return redirect('produit_list')
     else:
