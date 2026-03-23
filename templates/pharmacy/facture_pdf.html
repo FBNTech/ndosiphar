@@ -88,9 +88,15 @@
                     <td class="label"><b>TOTAL :</b></td>
                     <td class="value"><b>{{ vente.montant_total|floatformat:2 }}</b></td>
                 </tr>
+                {% if vente.remise_pourcent > 0 %}
+                <tr>
+                    <td class="label"><b>REMISE ({{ vente.remise_pourcent|floatformat:0 }}%) :</b></td>
+                    <td class="value"><b>- {{ vente.montant_remise|floatformat:2 }}</b></td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td class="label"><b>NET A PAYER :</b></td>
-                    <td class="value"><b>{{ vente.montant_total|floatformat:2 }}</b></td>
+                    <td class="value"><b>{{ vente.montant_net|floatformat:2 }}</b></td>
                 </tr>
                 {% endlocalize %}
             </table>
@@ -150,9 +156,15 @@
                     <td class="label"><b>TOTAL :</b></td>
                     <td class="value"><b>{{ vente.montant_total|floatformat:2 }}</b></td>
                 </tr>
+                {% if vente.remise_pourcent > 0 %}
+                <tr>
+                    <td class="label"><b>REMISE ({{ vente.remise_pourcent|floatformat:0 }}%) :</b></td>
+                    <td class="value"><b>- {{ vente.montant_remise|floatformat:2 }}</b></td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td class="label"><b>NET A PAYER :</b></td>
-                    <td class="value"><b>{{ vente.montant_total|floatformat:2 }}</b></td>
+                    <td class="value"><b>{{ vente.montant_net|floatformat:2 }}</b></td>
                 </tr>
                 {% endlocalize %}
             </table>

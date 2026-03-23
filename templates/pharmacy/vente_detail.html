@@ -9,7 +9,7 @@
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-cart3"></i> Lignes de la Vente</span>
-                <span class="badge bg-primary fs-6">Total: {{ vente.montant_total|floatformat:2 }} FC</span>
+                <span class="badge bg-primary fs-6">Net: {{ vente.montant_net|floatformat:2 }} FC</span>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -50,6 +50,18 @@
                                 <th>{{ vente.montant_total|floatformat:2 }} FC</th>
                                 <th></th>
                             </tr>
+                            {% if vente.remise_pourcent > 0 %}
+                            <tr>
+                                <th colspan="3" class="text-end">REMISE ({{ vente.remise_pourcent|floatformat:0 }}%):</th>
+                                <th class="text-danger">- {{ vente.montant_remise|floatformat:2 }} FC</th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th colspan="3" class="text-end">NET A PAYER:</th>
+                                <th class="text-success">{{ vente.montant_net|floatformat:2 }} FC</th>
+                                <th></th>
+                            </tr>
+                            {% endif %}
                         </tfoot>
                         {% endif %}
                     </table>

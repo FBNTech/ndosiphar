@@ -31,6 +31,12 @@ class Fournisseur(models.Model):
     def __str__(self):
         return f"{self.designation} ({self.marge_beneficiaire}%)"
 
+    def recalculer_prix_produits(self):
+        """Recalcule le prix_vente_usd de tous les produits de ce fournisseur."""
+        for produit in self.produit_set.all():
+            produit.calculer_prix_vente_usd()
+            produit.save()
+
 
 class Produit(models.Model):
     code_produit = models.AutoField(primary_key=True, verbose_name="Code Produit")
@@ -42,7 +48,7 @@ class Produit(models.Model):
     jours_alerte_expiration = models.IntegerField(default=30, verbose_name="Alerte Expiration (jours avant)")
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.PROTECT, verbose_name="Fournisseur")
     date_expiration = models.DateField(null=True, blank=True, verbose_name="Date d'Expiration")
-    prix_vente_usd = models.DecimalField(max_digits=12, decimal_places=4, default=0, verbose_name="Prix de Vente (USD)")
+    prix_vente_usd = models.DecimalField(max_digits=16, decimal_places=10, default=0, verbose_name="Prix de Vente (USD)")
 
     class Meta:
         verbose_name = "Produit"
@@ -72,7 +78,7 @@ class Produit(models.Model):
         try:
             taux = Taux.objects.get(code_devise='USD')
             if taux.montant_fc > 0:
-                self.prix_vente_usd = (prix_avec_marge / taux.montant_fc).quantize(Decimal('0.0001'))
+                self.prix_vente_usd = (prix_avec_marge / taux.montant_fc).quantize(Decimal('0.0000000001'))
         except Taux.DoesNotExist:
             self.prix_vente_usd = Decimal('0')
         return self.prix_vente_usd
@@ -131,6 +137,9 @@ class Vente(models.Model):
     type_vente = models.CharField(max_length=10, choices=TYPE_CHOICES, default='detail', verbose_name="Type de Vente")
     mode_paiement = models.CharField(max_length=10, choices=MODE_PAIEMENT_CHOICES, default='comptant', verbose_name="Mode de paiement")
     montant_total = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Montant Total (FC)")
+    remise_pourcent = models.DecimalField(max_digits=5, decimal_places=2, default=2, verbose_name="Remise (%)")
+    montant_remise = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Montant Remise (FC)")
+    montant_net = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Net à Payer (FC)")
     montant_paye = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Montant Payé (FC)")
     est_solde = models.BooleanField(default=True, verbose_name="Soldé")
     observation = models.TextField(blank=True, verbose_name="Observation")
@@ -147,6 +156,8 @@ class Vente(models.Model):
     def calculer_total(self):
         total = sum(ligne.montant_ligne for ligne in self.lignes.all())
         self.montant_total = total
+        self.montant_remise = (total * self.remise_pourcent / Decimal('100')).quantize(Decimal('0.01'))
+        self.montant_net = total - self.montant_remise
         self.save()
         return total
 

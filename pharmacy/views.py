@@ -9,6 +9,7 @@ from xhtml2pdf import pisa
 from io import BytesIO
 from django.db import models
 from datetime import date, timedelta
+from decimal import Decimal
 import json
 from .models import Taux, Fournisseur, Produit, Client, Vente, LigneVente, Historique
 from django.conf import settings
@@ -195,8 +196,9 @@ def fournisseur_edit(request, pk):
     if request.method == 'POST':
         form = FournisseurForm(request.POST, instance=fournisseur)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Fournisseur modifié avec succès.")
+            fournisseur = form.save()
+            fournisseur.recalculer_prix_produits()
+            messages.success(request, "Fournisseur modifié et prix des produits recalculés avec succès.")
             return redirect('fournisseur_list')
     else:
         form = FournisseurForm(instance=fournisseur)
@@ -499,6 +501,8 @@ def vente_edit(request, pk):
                 total_vente += montant_ligne
             
             vente.montant_total = total_vente
+            vente.montant_remise = (total_vente * vente.remise_pourcent / Decimal('100')).quantize(Decimal('0.01'))
+            vente.montant_net = total_vente - vente.montant_remise
             vente.save()
             
             messages.success(request, f"Vente #{vente.code_vente} modifiée avec succès.")
@@ -721,7 +725,7 @@ def vente_create(request):
             
             # Gérer le mode de paiement
             if vente.mode_paiement == 'comptant':
-                vente.montant_paye = vente.montant_total
+                vente.montant_paye = vente.montant_net
                 vente.est_solde = True
             else:
                 vente.montant_paye = 0
