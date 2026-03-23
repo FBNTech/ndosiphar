@@ -148,8 +148,18 @@
             <div class="mt-3">
                 <div class="total-display mb-3" id="totalBlock" style="display:none;">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span style="font-size:1rem; opacity:0.9;">TOTAL A PAYER</span>
+                        <span style="font-size:1rem; opacity:0.9;">TOTAL BRUT</span>
                         <span class="amount" id="totalGeneral">0,00 FC</span>
+                    </div>
+                    <div id="remiseBlock" style="display:none; border-top: 1px solid rgba(255,255,255,0.3); margin-top: 0.5rem; padding-top: 0.5rem;">
+                        <div class="d-flex justify-content-between align-items-center" style="opacity:0.85; font-size:0.85rem;">
+                            <span>Remise ({{ taux_remise }}%)</span>
+                            <span id="montantRemise">0,00 FC</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <span style="font-size:1rem; opacity:0.9;">NET À PAYER</span>
+                            <span class="amount" id="totalNet">0,00 FC</span>
+                        </div>
                     </div>
                 </div>
                 <div class="d-flex gap-2">
@@ -382,6 +392,19 @@ function actualiserTableau() {
         });
         totalBlock.style.display = 'block';
         document.getElementById('totalGeneral').textContent = formatMontant(total) + ' FC';
+        
+        const remiseBlock = document.getElementById('remiseBlock');
+        if (total >= 10000) {
+            const tauxRemise = parseFloat('{{ taux_remise }}') || 0;
+            const montantRemise = total * tauxRemise / 100;
+            const totalNet = total - montantRemise;
+            remiseBlock.style.display = 'block';
+            document.getElementById('montantRemise').textContent = '- ' + formatMontant(montantRemise) + ' FC';
+            document.getElementById('totalNet').textContent = formatMontant(totalNet) + ' FC';
+        } else {
+            remiseBlock.style.display = 'none';
+        }
+        
         document.getElementById('btnEnregistrer').disabled = false;
         document.getElementById('compteurLignes').textContent = lignes.length + ' article(s)';
     }

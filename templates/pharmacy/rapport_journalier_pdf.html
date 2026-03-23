@@ -77,12 +77,14 @@
     <table class="items">
         <thead>
             <tr>
-                <th style="width:8%;">N°</th>
-                <th style="width:18%;">Client</th>
-                <th style="width:8%;">Type</th>
-                <th style="width:36%;">Produits</th>
-                <th style="width:15%;" class="text-right">Montant</th>
-                <th style="width:15%;" class="text-right">Heure</th>
+                <th style="width:7%;">N°</th>
+                <th style="width:15%;">Client</th>
+                <th style="width:7%;">Type</th>
+                <th style="width:28%;">Produits</th>
+                <th style="width:12%;" class="text-right">Montant</th>
+                <th style="width:8%;" class="text-right">Remise</th>
+                <th style="width:12%;" class="text-right">Net à payer</th>
+                <th style="width:11%;" class="text-right">Heure</th>
             </tr>
         </thead>
         <tbody>
@@ -97,6 +99,8 @@
                     {% endfor %}
                 </td>
                 <td class="text-right"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                <td class="text-right">{{ v.montant_remise|floatformat:2 }} FC</td>
+                <td class="text-right"><strong>{{ v.montant_net|floatformat:2 }} FC</strong></td>
                 <td class="text-right">{{ v.date_vente|date:"H:i" }}</td>
             </tr>
             {% endfor %}
@@ -115,12 +119,14 @@
     <table class="items credit">
         <thead>
             <tr>
-                <th style="width:8%;">N°</th>
-                <th style="width:20%;">Client</th>
-                <th style="width:8%;">Type</th>
-                <th style="width:34%;">Produits</th>
-                <th style="width:15%;" class="text-right">Montant</th>
-                <th style="width:15%;" class="text-right">Heure</th>
+                <th style="width:7%;">N°</th>
+                <th style="width:15%;">Client</th>
+                <th style="width:7%;">Type</th>
+                <th style="width:28%;">Produits</th>
+                <th style="width:12%;" class="text-right">Montant</th>
+                <th style="width:8%;" class="text-right">Remise</th>
+                <th style="width:12%;" class="text-right">Net à payer</th>
+                <th style="width:11%;" class="text-right">Heure</th>
             </tr>
         </thead>
         <tbody>
@@ -135,6 +141,8 @@
                     {% endfor %}
                 </td>
                 <td class="text-right"><strong>{{ v.montant_total|floatformat:2 }} FC</strong></td>
+                <td class="text-right">{{ v.montant_remise|floatformat:2 }} FC</td>
+                <td class="text-right"><strong>{{ v.montant_net|floatformat:2 }} FC</strong></td>
                 <td class="text-right">{{ v.date_vente|date:"H:i" }}</td>
             </tr>
             {% endfor %}
@@ -189,6 +197,15 @@
                 <td class="value">{{ total_comptant|floatformat:2 }} FC</td>
             </tr>
             <tr>
+                <td class="label">Remise ventes au comptant :</td>
+                <td class="value" style="color:#e65100;">- {{ total_remise_comptant|floatformat:2 }} FC</td>
+            </tr>
+            <tr>
+                <td class="label">Net ventes au comptant :</td>
+                <td class="value">{{ total_net_comptant|floatformat:2 }} FC</td>
+            </tr>
+            <tr><td colspan="2" style="border-bottom:1px solid #dee2e6;"></td></tr>
+            <tr>
                 <td class="label">Nombre de ventes à crédit :</td>
                 <td class="value">{{ ventes_credit|length }}</td>
             </tr>
@@ -196,15 +213,33 @@
                 <td class="label">Total ventes à crédit :</td>
                 <td class="value">{{ total_credit|floatformat:2 }} FC</td>
             </tr>
+            <tr>
+                <td class="label">Remise ventes à crédit :</td>
+                <td class="value" style="color:#e65100;">- {{ total_remise_credit|floatformat:2 }} FC</td>
+            </tr>
+            <tr>
+                <td class="label">Net ventes à crédit :</td>
+                <td class="value">{{ total_net_credit|floatformat:2 }} FC</td>
+            </tr>
             {% if historiques %}
+            <tr><td colspan="2" style="border-bottom:1px solid #dee2e6;"></td></tr>
             <tr>
                 <td class="label">Suppressions / Modifications :</td>
                 <td class="value">{{ historiques|length }} action(s)</td>
             </tr>
             {% endif %}
+            <tr><td colspan="2" style="border-bottom:1px solid #dee2e6;"></td></tr>
+            <tr>
+                <td class="label" style="font-weight:bold;">Total brut :</td>
+                <td class="value">{{ total_general|floatformat:2 }} FC</td>
+            </tr>
+            <tr>
+                <td class="label" style="font-weight:bold; color:#e65100;">Total remises :</td>
+                <td class="value" style="color:#e65100;">- {{ total_remise|floatformat:2 }} FC</td>
+            </tr>
         </table>
         <div class="summary-total">
-            TOTAL GÉNÉRAL : {{ total_general|floatformat:2 }} FC
+            NET À ENCAISSER : {{ total_net|floatformat:2 }} FC
         </div>
     </div>
 

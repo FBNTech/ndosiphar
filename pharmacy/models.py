@@ -156,7 +156,10 @@ class Vente(models.Model):
     def calculer_total(self):
         total = sum(ligne.montant_ligne for ligne in self.lignes.all())
         self.montant_total = total
-        self.montant_remise = (total * self.remise_pourcent / Decimal('100')).quantize(Decimal('0.01'))
+        if total >= Decimal('10000'):
+            self.montant_remise = (total * self.remise_pourcent / Decimal('100')).quantize(Decimal('0.01'))
+        else:
+            self.montant_remise = Decimal('0')
         self.montant_net = total - self.montant_remise
         self.save()
         return total

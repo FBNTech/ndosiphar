@@ -501,7 +501,10 @@ def vente_edit(request, pk):
                 total_vente += montant_ligne
             
             vente.montant_total = total_vente
-            vente.montant_remise = (total_vente * vente.remise_pourcent / Decimal('100')).quantize(Decimal('0.01'))
+            if total_vente >= Decimal('10000'):
+                vente.montant_remise = (total_vente * vente.remise_pourcent / Decimal('100')).quantize(Decimal('0.01'))
+            else:
+                vente.montant_remise = Decimal('0')
             vente.montant_net = total_vente - vente.montant_remise
             vente.save()
             
@@ -547,6 +550,7 @@ def vente_edit(request, pk):
         'produits_json': produits_json,
         'lignes_json': lignes_json,
         'is_edit': True,
+        'taux_remise': vente.remise_pourcent,
     })
 
 
@@ -755,6 +759,7 @@ def vente_create(request):
         'title': 'Nouvelle Vente',
         'produits_disponibles': produits_disponibles,
         'produits_json': produits_json,
+        'taux_remise': 2,
     })
 
 
@@ -936,6 +941,14 @@ def rapport_journalier_pdf(request):
     total_credit = sum(v.montant_total for v in ventes_credit)
     total_general = total_comptant + total_credit
     
+    total_remise_comptant = sum(v.montant_remise for v in ventes_comptant)
+    total_remise_credit = sum(v.montant_remise for v in ventes_credit)
+    total_remise = total_remise_comptant + total_remise_credit
+    
+    total_net_comptant = sum(v.montant_net for v in ventes_comptant)
+    total_net_credit = sum(v.montant_net for v in ventes_credit)
+    total_net = total_net_comptant + total_net_credit
+    
     # Historique du jour (suppressions, modifications, etc.)
     historiques = Historique.objects.filter(
         utilisateur=vendeur,
@@ -957,6 +970,12 @@ def rapport_journalier_pdf(request):
         'total_comptant': total_comptant,
         'total_credit': total_credit,
         'total_general': total_general,
+        'total_remise_comptant': total_remise_comptant,
+        'total_remise_credit': total_remise_credit,
+        'total_remise': total_remise,
+        'total_net_comptant': total_net_comptant,
+        'total_net_credit': total_net_credit,
+        'total_net': total_net,
         'historiques': historiques,
         'logo_data': logo_data,
     }
