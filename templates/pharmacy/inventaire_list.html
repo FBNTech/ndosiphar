@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Inventaires - NDOSIPHAR{% endblock %}
+{% block page_title %}Inventaires{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-clipboard2-check text-primary"></i> Liste des inventaires</h4>
+        <p class="text-muted mb-0 small">Suivi des comptages physiques et écarts de stock.</p>
+    </div>
+    <a href="{% url 'inventaire_create' %}" class="btn btn-success">
+        <i class="bi bi-plus-lg"></i> Nouvel inventaire
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card-body p-0">
+        {% if inventaires %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background: #f8fafc;">
+                    <tr>
+                        <th>#</th>
+                        <th>Date création</th>
+                        <th>Utilisateur</th>
+                        <th>Statut</th>
+                        <th class="text-end">Produits</th>
+                        <th class="text-end">Valeur écart (FC)</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in inventaires %}
+                    <tr>
+                        <td><strong>{{ inv.code_inventaire }}</strong></td>
+                        <td>{{ inv.date_creation|date:"d/m/Y H:i" }}</td>
+                        <td>{{ inv.utilisateur.get_full_name|default:inv.utilisateur.username }}</td>
+                        <td>
+                            {% if inv.statut == 'brouillon' %}
+                                <span class="badge bg-warning text-dark">Brouillon</span>
+                            {% elif inv.statut == 'valide' %}
+                                <span class="badge bg-success">Validé</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Annulé</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ inv.nb_produits_comptes }}</td>
+                        <td class="text-end {% if inv.total_ecart_valeur < 0 %}text-danger{% elif inv.total_ecart_valeur > 0 %}text-success{% endif %} fw-bold">
+                            {{ inv.total_ecart_valeur|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            {% if inv.statut == 'brouillon' %}
+                                <a href="{% url 'inventaire_saisie' inv.pk %}" class="btn btn-sm btn-primary" title="Continuer la saisie">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'inventaire_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary" title="Détail">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'inventaire_pdf' inv.pk %}" target="_blank" class="btn btn-sm btn-outline-danger" title="PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <form method="post" action="{% url 'inventaire_delete' inv.pk %}" class="d-inline"
+                                  onsubmit="return confirm('Supprimer définitivement cet inventaire ? Cette action est irréversible.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard2 text-muted" style="font-size: 3rem;"></i>
+            <p class="text-muted mt-3 mb-0">Aucun inventaire enregistré.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

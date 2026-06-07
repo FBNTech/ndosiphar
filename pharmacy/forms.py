@@ -73,6 +73,19 @@ class ProduitForm(forms.ModelForm):
         if 'fournisseur' in self.fields:
             self.fields['fournisseur'].empty_label = '-- Fournisseur --'
 
+    def clean_designation(self):
+        designation = self.cleaned_data.get('designation')
+        if designation:
+            qs = Produit.objects.filter(designation__iexact=designation)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            existant = qs.first()
+            if existant:
+                raise forms.ValidationError(
+                    f"Ce produit existe déjà et son code est {existant.code_produit}"
+                )
+        return designation
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         if not instance.pk:

@@ -1,4 +1,4 @@
-from django.urls import path
+﻿from django.urls import path
 from . import views
 from . import excel_views
 
@@ -61,6 +61,17 @@ urlpatterns = [
     path('clients/import/', excel_views.import_clients, name='import_clients'),
     path('ventes/export/', excel_views.export_ventes, name='export_ventes'),
 
+    # Inventaire
+    path('inventaires/', views.inventaire_list, name='inventaire_list'),
+    path('inventaires/mes-comptages/', views.inventaire_mes_comptages, name='inventaire_mes_comptages'),
+    path('inventaires/nouveau/', views.inventaire_create, name='inventaire_create'),
+    path('inventaires/<int:pk>/saisie/', views.inventaire_saisie, name='inventaire_saisie'),
+    path('inventaires/<int:pk>/ligne/<int:ligne_pk>/compter/', views.inventaire_ligne_compter, name='inventaire_ligne_compter'),
+    path('inventaires/<int:pk>/valider/', views.inventaire_valider, name='inventaire_valider'),
+    path('inventaires/<int:pk>/', views.inventaire_detail, name='inventaire_detail'),
+    path('inventaires/<int:pk>/annuler/', views.inventaire_annuler, name='inventaire_annuler'),
+    path('inventaires/<int:pk>/supprimer/', views.inventaire_delete, name='inventaire_delete'),
+    path('inventaires/<int:pk>/pdf/', views.inventaire_pdf, name='inventaire_pdf'),
     # Historique
     path('historique-ventes/', views.historique_ventes, name='historique_ventes'),
     path('historique/', views.historique_list, name='historique_list'),

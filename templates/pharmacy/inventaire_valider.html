@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Validation inventaire #{{ inventaire.code_inventaire }} - NDOSIPHAR{% endblock %}
+{% block page_title %}Validation inventaire #{{ inventaire.code_inventaire }}{% endblock %}
+
+{% block content %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    <strong>Vous êtes sur le point de valider cet inventaire.</strong>
+    Les stocks théoriques des produits ci-dessous (lignes avec écart) seront
+    remplacés par les stocks physiques saisis. <strong>Cette opération est irréversible.</strong>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Produits comptés</small>
+            <div class="fs-4 fw-bold">{{ inventaire.nb_produits_comptes }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Écarts</small>
+            <div class="fs-4 fw-bold text-warning">{{ inventaire.nb_ecarts }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Manquants / Excédents</small>
+            <div class="fs-5 fw-bold">
+                <span class="text-danger">{{ inventaire.nb_manquants }}</span> /
+                <span class="text-success">{{ inventaire.nb_excedents }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Valeur écart (FC)</small>
+            <div class="fs-4 fw-bold {% if inventaire.total_ecart_valeur < 0 %}text-danger{% elif inventaire.total_ecart_valeur > 0 %}text-success{% endif %}">
+                {{ inventaire.total_ecart_valeur|floatformat:2 }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card-header bg-white">
+        <strong>Détail des écarts ({{ lignes_ecart|length }})</strong>
+    </div>
+    <div class="card-body p-0">
+        {% if lignes_ecart %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead style="background: #f8fafc;">
+                    <tr>
+                        <th>Produit</th>
+                        <th class="text-center">Théorique</th>
+                        <th class="text-center">Physique</th>
+                        <th class="text-center">Écart</th>
+                        <th class="text-end">Valeur (FC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lignes_ecart %}
+                    <tr>
+                        <td><strong>{{ l.produit.designation }}</strong></td>
+                        <td class="text-center text-muted">{{ l.stock_theorique }}</td>
+                        <td class="text-center fw-bold">{{ l.stock_physique }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if l.ecart < 0 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                {% if l.ecart > 0 %}+{% endif %}{{ l.ecart }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-bold {% if l.valeur_ecart < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ l.valeur_ecart|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-check2-circle text-success" style="font-size: 2rem;"></i>
+            <p class="mb-0 mt-2">Aucun écart détecté. Les stocks théoriques sont conformes à la réalité.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="d-flex gap-2 mt-3 justify-content-end">
+    <a href="{% url 'inventaire_saisie' inventaire.pk %}" class="btn btn-light border">
+        <i class="bi bi-arrow-left"></i> Retour à la saisie
+    </a>
+    <a href="{% url 'inventaire_pdf' inventaire.pk %}" target="_blank" class="btn btn-outline-danger">
+        <i class="bi bi-file-earmark-pdf"></i> Aperçu PDF
+    </a>
+    <form method="post" class="d-inline" onsubmit="return confirm('⚠️ Confirmer la validation ? Cette opération est irréversible.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-check2-circle"></i> Valider définitivement
+        </button>
+    </form>
+</div>
+{% endblock %}

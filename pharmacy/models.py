@@ -40,7 +40,7 @@ class Fournisseur(models.Model):
 
 class Produit(models.Model):
     code_produit = models.AutoField(primary_key=True, verbose_name="Code Produit")
-    designation = models.CharField(max_length=200, verbose_name="Désignation Produit")
+    designation = models.CharField(max_length=200, unique=True, verbose_name="Désignation Produit")
     prix_achat = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Prix d'Achat (FC)")
     quantite_initiale = models.IntegerField(default=0, verbose_name="Quantité Initiale")
     quantite_stock = models.IntegerField(default=0, verbose_name="Quantité en Stock")
@@ -204,3 +204,88 @@ class Historique(models.Model):
 
     def __str__(self):
         return f"{self.date_action:%d/%m/%Y %H:%M} - {self.utilisateur} - {self.get_action_display()}"
+
+
+class Inventaire(models.Model):
+    STATUT_CHOICES = (
+        ('brouillon', 'Brouillon'),
+        ('valide', 'Validé'),
+        ('annule', 'Annulé'),
+    )
+    code_inventaire = models.AutoField(primary_key=True, verbose_name="Code Inventaire")
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
+    date_validation = models.DateTimeField(null=True, blank=True, verbose_name="Date de validation")
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name="Utilisateur")
+    compteurs_autorises = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='inventaires_compteur_autorise',
+        verbose_name="Compteurs autorisés"
+    )
+    statut = models.CharField(max_length=12, choices=STATUT_CHOICES, default='brouillon', verbose_name="Statut")
+    observation = models.TextField(blank=True, verbose_name="Observation")
+    nb_produits_comptes = models.IntegerField(default=0, verbose_name="Nb produits comptés")
+    total_ecart_valeur = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Valeur totale écart (FC)")
+
+    class Meta:
+        verbose_name = "Inventaire"
+        verbose_name_plural = "Inventaires"
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"Inventaire #{self.code_inventaire} - {self.date_creation:%d/%m/%Y}"
+
+    @property
+    def nb_ecarts(self):
+        return self.lignes.exclude(ecart=0).count()
+
+    @property
+    def nb_manquants(self):
+        return self.lignes.filter(ecart__lt=0).count()
+
+    @property
+    def nb_excedents(self):
+        return self.lignes.filter(ecart__gt=0).count()
+
+    @property
+    def nb_comptees(self):
+        return self.lignes.filter(comptee=True).count()
+
+    @property
+    def nb_non_comptees(self):
+        return self.lignes.filter(comptee=False).count()
+
+    def recalculer_totaux(self):
+        from django.db.models import Sum
+        agg = self.lignes.aggregate(
+            n=models.Count('pk'),
+            v=Sum('valeur_ecart'),
+        )
+        self.nb_produits_comptes = agg['n'] or 0
+        self.total_ecart_valeur = agg['v'] or Decimal('0')
+
+
+class LigneInventaire(models.Model):
+    inventaire = models.ForeignKey(Inventaire, on_delete=models.CASCADE, related_name='lignes', verbose_name="Inventaire")
+    produit = models.ForeignKey(Produit, on_delete=models.PROTECT, verbose_name="Produit")
+    stock_theorique = models.IntegerField(verbose_name="Stock théorique")
+    stock_physique = models.IntegerField(verbose_name="Stock physique")
+    ecart = models.IntegerField(default=0, verbose_name="Écart")
+    prix_achat = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Prix d'achat (FC)")
+    valeur_ecart = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Valeur écart (FC)")
+    comptee = models.BooleanField(default=False, verbose_name="Comptée")
+
+    class Meta:
+        verbose_name = "Ligne d'inventaire"
+        verbose_name_plural = "Lignes d'inventaire"
+        unique_together = ('inventaire', 'produit')
+        ordering = ['produit__designation']
+
+    def __str__(self):
+        return f"{self.produit.designation} (théo: {self.stock_theorique}, phys: {self.stock_physique})"
+
+    def save(self, *args, **kwargs):
+        self.ecart = self.stock_physique - self.stock_theorique
+        self.valeur_ecart = (Decimal(self.ecart) * self.prix_achat).quantize(Decimal('0.01'))
+        super().save(*args, **kwargs)
+

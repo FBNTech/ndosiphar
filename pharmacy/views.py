@@ -11,7 +11,7 @@ from django.db import models
 from datetime import date, timedelta
 from decimal import Decimal
 import json
-from .models import Taux, Fournisseur, Produit, Client, Vente, LigneVente, Historique
+from .models import Taux, Fournisseur, Produit, Client, Vente, LigneVente, Historique, Inventaire, LigneInventaire
 from django.conf import settings
 from .forms import (TauxForm, FournisseurForm, ProduitForm,
                     ClientForm, VenteForm, VenteCompletForm, LigneVenteForm)
@@ -37,6 +37,29 @@ def admin_gestionnaire_required(view_func):
             return redirect('dashboard')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def is_admin_or_gerant(user):
+    return user.is_admin or getattr(user, 'is_gerant', False)
+
+
+def admin_gerant_required(view_func):
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not is_admin_or_gerant(request.user):
+            messages.error(request, "Accès réservé à l'administrateur et au gérant.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def can_count_inventory(user, inventaire):
+    if is_admin_or_gerant(user):
+        return True
+    if user.role not in ('vendeur', 'gestionnaire', 'controleur'):
+        return False
+    return inventaire.compteurs_autorises.filter(pk=user.pk).exists()
 
 
 @login_required
@@ -746,6 +769,10 @@ def vente_create(request):
                     'success': True,
                     'detail_url': reverse('vente_detail', args=[vente.pk]),
                     'facture_url': reverse('facture_pdf', args=[vente.pk]),
+                    'montant_total': float(vente.montant_total or 0),
+                    'montant_remise': float(vente.montant_remise or 0),
+                    'montant_net': float(vente.montant_net or 0),
+                    'remise_pourcent': float(vente.remise_pourcent or 0),
                 })
             return redirect('vente_detail', pk=vente.pk)
         else:
@@ -1045,3 +1072,292 @@ def historique_list(request):
         return redirect('dashboard')
     historiques = Historique.objects.select_related('utilisateur').all()[:200]
     return render(request, 'pharmacy/historique_list.html', {'historiques': historiques})
+
+
+# ============ INVENTAIRE ============
+
+@admin_gerant_required
+def inventaire_list(request):
+    """Liste de tous les inventaires."""
+    inventaires = Inventaire.objects.select_related('utilisateur').all()
+    return render(request, 'pharmacy/inventaire_list.html', {
+        'inventaires': inventaires,
+    })
+
+
+@login_required
+def inventaire_mes_comptages(request):
+    """Liste des inventaires auxquels l'utilisateur est autorisé pour le comptage."""
+    if is_admin_or_gerant(request.user):
+        return redirect('inventaire_list')
+
+    inventaires = Inventaire.objects.filter(
+        compteurs_autorises=request.user
+    ).select_related('utilisateur').order_by('-date_creation').distinct()
+
+    return render(request, 'pharmacy/inventaire_mes_comptages.html', {
+        'inventaires': inventaires,
+    })
+
+
+@admin_gerant_required
+def inventaire_create(request):
+    """Démarre un nouvel inventaire en brouillon avec snapshot du stock théorique."""
+    if request.method == 'POST':
+        observation = request.POST.get('observation', '').strip()
+        inv = Inventaire.objects.create(
+            utilisateur=request.user,
+            statut='brouillon',
+            observation=observation,
+        )
+        inv.compteurs_autorises.clear()
+        # Snapshot: une ligne par produit avec stock théorique = stock actuel
+        produits = Produit.objects.all().order_by('designation')
+        lignes = [
+            LigneInventaire(
+                inventaire=inv,
+                produit=p,
+                stock_theorique=p.quantite_stock,
+                stock_physique=p.quantite_stock,
+                prix_achat=p.prix_achat,
+            )
+            for p in produits
+        ]
+        LigneInventaire.objects.bulk_create(lignes)
+        # bulk_create ne déclenche pas save() → on recalcule l'écart manuellement (déjà 0)
+        inv.recalculer_totaux()
+        inv.save()
+        enregistrer_historique(request.user, 'creation', 'Inventaire',
+                               f"Inventaire #{inv.code_inventaire} démarré ({inv.nb_produits_comptes} produits)")
+        messages.success(request, f"Inventaire #{inv.code_inventaire} créé. Procédez à la saisie du comptage.")
+        return redirect('inventaire_saisie', pk=inv.pk)
+    return render(request, 'pharmacy/inventaire_form.html')
+
+
+@login_required
+def inventaire_saisie(request, pk):
+    """Saisie du stock physique. Accessible uniquement si statut = brouillon."""
+    inv = get_object_or_404(Inventaire.objects.prefetch_related('compteurs_autorises'), pk=pk)
+    if not can_count_inventory(request.user, inv):
+        messages.error(request, "Vous n'êtes pas autorisé à effectuer le comptage de cet inventaire.")
+        return redirect('dashboard')
+
+    can_see_sensitive_data = is_admin_or_gerant(request.user)
+
+    if inv.statut != 'brouillon':
+        messages.warning(request, "Cet inventaire est déjà validé et ne peut plus être modifié.")
+        return redirect('inventaire_detail', pk=inv.pk)
+
+    lignes = inv.lignes.select_related('produit').order_by('produit__designation')
+    return render(request, 'pharmacy/inventaire_saisie.html', {
+        'inventaire': inv,
+        'lignes': lignes,
+        'can_see_sensitive_data': can_see_sensitive_data,
+        'can_validate_inventory': can_see_sensitive_data,
+        'can_recount': can_see_sensitive_data,
+    })
+
+
+@login_required
+def inventaire_ligne_compter(request, pk, ligne_pk):
+    """Endpoint AJAX : marque une ligne comme comptée et enregistre le stock physique saisi."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST requis'}, status=405)
+    inv = get_object_or_404(Inventaire.objects.prefetch_related('compteurs_autorises'), pk=pk)
+    if not can_count_inventory(request.user, inv):
+        return JsonResponse({'success': False, 'error': 'Accès refusé'}, status=403)
+
+    can_see_sensitive_data = is_admin_or_gerant(request.user)
+
+    if inv.statut != 'brouillon':
+        return JsonResponse({'success': False, 'error': 'Inventaire non modifiable'}, status=400)
+    ligne = get_object_or_404(LigneInventaire, pk=ligne_pk, inventaire=inv)
+
+    # En mode opérateur (non admin/gérant), une ligne déjà comptée est verrouillée.
+    if ligne.comptee and not can_see_sensitive_data:
+        return JsonResponse({'success': False, 'error': 'Cette ligne est déjà comptée et verrouillée.'}, status=400)
+
+    val = request.POST.get('stock_physique', '').strip()
+    if val == '':
+        return JsonResponse({'success': False, 'error': 'Valeur requise'}, status=400)
+    try:
+        qte = int(val)
+        if qte < 0:
+            raise ValueError
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Valeur invalide'}, status=400)
+
+    ligne.stock_physique = qte
+    ligne.comptee = True
+    ligne.save()
+    inv.recalculer_totaux()
+    inv.save()
+
+    payload = {
+        'success': True,
+        'ligne_id': ligne.pk,
+        'stock_physique': ligne.stock_physique,
+        'comptee': ligne.comptee,
+        'nb_comptees': inv.nb_comptees,
+        'nb_non_comptees': inv.nb_non_comptees,
+    }
+    if can_see_sensitive_data:
+        payload.update({
+            'ecart': ligne.ecart,
+            'valeur_ecart': float(ligne.valeur_ecart),
+            'nb_ecarts': inv.nb_ecarts,
+            'total_ecart_valeur': float(inv.total_ecart_valeur),
+        })
+    return JsonResponse(payload)
+
+
+@admin_gerant_required
+def inventaire_valider(request, pk):
+    """Récap + validation finale. Applique les stocks physiques sur les produits."""
+    inv = get_object_or_404(Inventaire, pk=pk)
+    if inv.statut != 'brouillon':
+        messages.warning(request, "Cet inventaire est déjà validé.")
+        return redirect('inventaire_detail', pk=inv.pk)
+
+    lignes = inv.lignes.select_related('produit').order_by('produit__designation')
+
+    # Blocage si des produits n'ont pas été comptés
+    non_comptees = [l for l in lignes if not l.comptee]
+    if non_comptees:
+        messages.error(
+            request,
+            f"Impossible de valider : {len(non_comptees)} produit(s) n'ont pas encore été comptés. "
+            "Cliquez sur ✓ pour chaque ligne après comptage."
+        )
+        return redirect('inventaire_saisie', pk=inv.pk)
+
+    if request.method == 'POST':
+        from django.db import transaction
+        with transaction.atomic():
+            for ligne in lignes:
+                if ligne.ecart != 0:
+                    produit = ligne.produit
+                    produit.quantite_stock = ligne.stock_physique
+                    produit.save()
+            inv.statut = 'valide'
+            inv.date_validation = timezone.now()
+            inv.recalculer_totaux()
+            inv.save()
+        enregistrer_historique(
+            request.user, 'modification', 'Inventaire',
+            f"Inventaire #{inv.code_inventaire} validé — {inv.nb_ecarts} écart(s), valeur: {inv.total_ecart_valeur} FC"
+        )
+        messages.success(request, f"Inventaire #{inv.code_inventaire} validé. Stocks mis à jour.")
+        return redirect('inventaire_detail', pk=inv.pk)
+
+    return render(request, 'pharmacy/inventaire_valider.html', {
+        'inventaire': inv,
+        'lignes': lignes,
+        'lignes_ecart': [l for l in lignes if l.ecart != 0],
+    })
+
+
+@admin_gerant_required
+def inventaire_detail(request, pk):
+    """Consultation d'un inventaire (validé ou non)."""
+    inv = get_object_or_404(Inventaire.objects.prefetch_related('compteurs_autorises'), pk=pk)
+
+    if request.method == 'POST' and inv.statut == 'brouillon':
+        user_ids = request.POST.getlist('compteurs')
+        from accounts.models import User
+        eligibles = User.objects.filter(
+            is_active=True,
+            role__in=['vendeur', 'gestionnaire', 'controleur'],
+            pk__in=user_ids,
+        )
+        inv.compteurs_autorises.set(eligibles)
+        enregistrer_historique(
+            request.user,
+            'modification',
+            'Inventaire',
+            f"Inventaire #{inv.code_inventaire} - mise à jour des compteurs autorisés ({eligibles.count()} utilisateur(s))"
+        )
+        messages.success(request, "Liste des compteurs autorisés mise à jour.")
+        return redirect('inventaire_detail', pk=inv.pk)
+
+    lignes = inv.lignes.select_related('produit').order_by('produit__designation')
+    from accounts.models import User
+    compteurs_disponibles = User.objects.filter(
+        is_active=True,
+        role__in=['vendeur', 'gestionnaire', 'controleur']
+    ).order_by('first_name', 'last_name', 'username')
+
+    return render(request, 'pharmacy/inventaire_detail.html', {
+        'inventaire': inv,
+        'lignes': lignes,
+        'compteurs_disponibles': compteurs_disponibles,
+        'compteurs_selectionnes_ids': set(inv.compteurs_autorises.values_list('id', flat=True)),
+    })
+
+
+@admin_gerant_required
+def inventaire_annuler(request, pk):
+    """Annule un inventaire en brouillon (ne touche pas aux stocks)."""
+    inv = get_object_or_404(Inventaire, pk=pk)
+    if inv.statut != 'brouillon':
+        messages.error(request, "Seul un inventaire en brouillon peut être annulé.")
+        return redirect('inventaire_detail', pk=inv.pk)
+    if request.method == 'POST':
+        inv.statut = 'annule'
+        inv.save()
+        enregistrer_historique(request.user, 'suppression', 'Inventaire',
+                               f"Inventaire #{inv.code_inventaire} annulé")
+        messages.success(request, f"Inventaire #{inv.code_inventaire} annulé.")
+        return redirect('inventaire_list')
+    return render(request, 'pharmacy/confirm_delete.html', {'object': inv, 'type': 'Inventaire (annulation)'})
+
+
+@admin_gerant_required
+def inventaire_delete(request, pk):
+    """Supprime définitivement un inventaire (et ses lignes)."""
+    inv = get_object_or_404(Inventaire, pk=pk)
+    if request.method == 'POST':
+        code = inv.code_inventaire
+        statut = inv.get_statut_display()
+        inv.delete()
+        enregistrer_historique(
+            request.user,
+            'suppression',
+            'Inventaire',
+            f"Inventaire #{code} supprimé définitivement (statut: {statut})"
+        )
+        messages.success(request, f"Inventaire #{code} supprimé définitivement.")
+        return redirect('inventaire_list')
+    return render(request, 'pharmacy/confirm_delete.html', {
+        'object': inv,
+        'type': 'Inventaire (suppression définitive)'
+    })
+
+
+@admin_gerant_required
+def inventaire_pdf(request, pk):
+    """PDF d'un inventaire avec tous les écarts."""
+    import os, base64
+    inv = get_object_or_404(Inventaire, pk=pk)
+    lignes = inv.lignes.select_related('produit').order_by('produit__designation')
+
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png')
+    logo_data = ''
+    if os.path.exists(logo_path):
+        with open(logo_path, 'rb') as f:
+            logo_data = 'data:image/png;base64,' + base64.b64encode(f.read()).decode('utf-8')
+
+    template = get_template('pharmacy/inventaire_pdf.html')
+    context = {
+        'inventaire': inv,
+        'lignes': lignes,
+        'date_impression': timezone.now(),
+        'logo_data': logo_data,
+    }
+    html = template.render(context)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'filename="inventaire_{inv.code_inventaire}.pdf"'
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse("Erreur lors de la génération du PDF", status=500)
+    return response

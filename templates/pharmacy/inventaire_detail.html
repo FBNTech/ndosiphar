@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Inventaire #{{ inventaire.code_inventaire }} - NDOSIPHAR{% endblock %}
+{% block page_title %}Inventaire #{{ inventaire.code_inventaire }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <h5 class="mb-1">
+            Inventaire #{{ inventaire.code_inventaire }}
+            {% if inventaire.statut == 'brouillon' %}
+                <span class="badge bg-warning text-dark">Brouillon</span>
+            {% elif inventaire.statut == 'valide' %}
+                <span class="badge bg-success">Validé</span>
+            {% else %}
+                <span class="badge bg-secondary">Annulé</span>
+            {% endif %}
+        </h5>
+        <div class="text-muted small">
+            Créé le {{ inventaire.date_creation|date:"d/m/Y H:i" }} par
+            {{ inventaire.utilisateur.get_full_name|default:inventaire.utilisateur.username }}
+            {% if inventaire.date_validation %}
+                · Validé le {{ inventaire.date_validation|date:"d/m/Y H:i" }}
+            {% endif %}
+        </div>
+        {% if inventaire.observation %}
+        <div class="mt-2 small"><em>{{ inventaire.observation }}</em></div>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        {% if inventaire.statut == 'brouillon' %}
+        <a href="{% url 'inventaire_saisie' inventaire.pk %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-pencil-square"></i> Reprendre la saisie
+        </a>
+        <form method="post" action="{% url 'inventaire_annuler' inventaire.pk %}" class="d-inline"
+              onsubmit="return confirm('Annuler définitivement cet inventaire ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-x-circle"></i> Annuler l'inventaire
+            </button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'inventaire_delete' inventaire.pk %}" class="d-inline"
+              onsubmit="return confirm('Supprimer définitivement cet inventaire ? Cette action est irréversible.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash"></i> Supprimer
+            </button>
+        </form>
+        <a href="{% url 'inventaire_pdf' inventaire.pk %}" target="_blank" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+        <a href="{% url 'inventaire_list' %}" class="btn btn-light border btn-sm">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+</div>
+
+{% if inventaire.statut == 'brouillon' %}
+<div class="card border-0 shadow-sm mb-3" style="border-radius: 16px;">
+    <div class="card-header bg-white">
+        <strong><i class="bi bi-people"></i> Autoriser des compteurs (mode aveugle)</strong>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Seuls les utilisateurs autorisés ci-dessous pourront saisir les quantités physiques en mode aveugle
+            (sans voir les quantités théoriques ni les écarts).
+        </p>
+        <form method="post" class="row g-2">
+            {% csrf_token %}
+            {% for u in compteurs_disponibles %}
+            <div class="col-md-4">
+                <div class="form-check border rounded p-2">
+                    <input class="form-check-input" type="checkbox" name="compteurs" value="{{ u.id }}"
+                           id="compteur{{ u.id }}" {% if u.id in compteurs_selectionnes_ids %}checked{% endif %}>
+                    <label class="form-check-label" for="compteur{{ u.id }}">
+                        <strong>{{ u.get_full_name|default:u.username }}</strong><br>
+                        <small class="text-muted">{{ u.get_role_display }}</small>
+                    </label>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-muted">Aucun utilisateur éligible actif.</div>
+            {% endfor %}
+            <div class="col-12 mt-2">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-check2-square"></i> Enregistrer les autorisations
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-2 mb-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Produits comptés</small>
+            <div class="fs-4 fw-bold">{{ inventaire.nb_produits_comptes }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Écarts</small>
+            <div class="fs-4 fw-bold text-warning">{{ inventaire.nb_ecarts }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Manquants / Excédents</small>
+            <div class="fs-5 fw-bold">
+                <span class="text-danger">{{ inventaire.nb_manquants }}</span> /
+                <span class="text-success">{{ inventaire.nb_excedents }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius: 12px;">
+            <small class="text-muted">Valeur écart (FC)</small>
+            <div class="fs-4 fw-bold {% if inventaire.total_ecart_valeur < 0 %}text-danger{% elif inventaire.total_ecart_valeur > 0 %}text-success{% endif %}">
+                {{ inventaire.total_ecart_valeur|floatformat:2 }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Détail des comptages</strong>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary active" data-filtre="tous">Tous</button>
+            <button type="button" class="btn btn-outline-warning" data-filtre="ecart">Écarts uniquement</button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="tableDetail">
+                <thead style="background: #f8fafc;">
+                    <tr>
+                        <th>Produit</th>
+                        <th class="text-center">Théorique</th>
+                        <th class="text-center">Physique</th>
+                        <th class="text-center">Écart</th>
+                        <th class="text-end">Valeur (FC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lignes %}
+                    <tr data-ecart="{{ l.ecart }}">
+                        <td><strong>{{ l.produit.designation }}</strong></td>
+                        <td class="text-center text-muted">{{ l.stock_theorique }}</td>
+                        <td class="text-center fw-bold">{{ l.stock_physique }}</td>
+                        <td class="text-center">
+                            {% if l.ecart == 0 %}
+                                <span class="badge bg-secondary">0</span>
+                            {% elif l.ecart < 0 %}
+                                <span class="badge bg-danger">{{ l.ecart }}</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">+{{ l.ecart }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-bold {% if l.valeur_ecart < 0 %}text-danger{% elif l.valeur_ecart > 0 %}text-success{% else %}text-muted{% endif %}">
+                            {{ l.valeur_ecart|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('[data-filtre]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('[data-filtre]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const f = this.dataset.filtre;
+        document.querySelectorAll('#tableDetail tbody tr').forEach(tr => {
+            const ec = parseInt(tr.dataset.ecart) || 0;
+            tr.style.display = (f === 'tous' || ec !== 0) ? '' : 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

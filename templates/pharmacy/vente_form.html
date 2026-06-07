@@ -173,6 +173,39 @@
     </div>
 </form>
 
+<!-- Modal récap vente (visible vendeur uniquement) -->
+<div class="modal fade" id="recapVenteModal" tabindex="-1" aria-labelledby="recapVenteLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; border: none; overflow: hidden;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e8c45 0%, #14532d 100%); color: #fff; border: none;">
+        <h5 class="modal-title" id="recapVenteLabel"><i class="bi bi-check-circle"></i> Vente enregistrée</h5>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted small mb-3"><i class="bi bi-eye-slash"></i> Récapitulatif interne — non imprimé sur la facture client.</p>
+        <table class="table table-borderless mb-0">
+          <tr>
+            <td class="fw-semibold text-muted">Montant total</td>
+            <td class="text-end fw-bold" id="recapTotal">0,00 FC</td>
+          </tr>
+          <tr id="recapRemiseRow">
+            <td class="fw-semibold text-muted">Remise (<span id="recapPourcent">0</span>%)</td>
+            <td class="text-end fw-bold text-danger" id="recapRemise">- 0,00 FC</td>
+          </tr>
+          <tr style="border-top: 2px dashed #d1d5db;">
+            <td class="fw-bold" style="font-size:1.1rem;">Net à encaisser</td>
+            <td class="text-end fw-bold text-success" id="recapNet" style="font-size:1.25rem;">0,00 FC</td>
+          </tr>
+        </table>
+      </div>
+      <div class="modal-footer" style="border: none;">
+        <button type="button" class="btn btn-success px-4" id="btnConfirmerImpression">
+          <i class="bi bi-printer"></i> Imprimer la facture
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Charger les lignes existantes si en mode édition
 {% if lignes_json %}
@@ -434,23 +467,41 @@ document.getElementById('venteForm').addEventListener('submit', function(e) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Ouvrir la facture dans un iframe caché et lancer l'impression
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = data.facture_url;
-            document.body.appendChild(iframe);
-            iframe.onload = function() {
-                try {
-                    iframe.contentWindow.print();
-                } catch(err) {
-                    // Si blocage cross-origin, ouvrir dans un nouvel onglet
-                    window.open(data.facture_url, '_blank');
-                }
-                // Rediriger après impression
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                    window.location.href = data.detail_url;
-                }, 1000);
+            // Afficher le récap au vendeur avant impression
+            document.getElementById('recapTotal').textContent = formatMontant(data.montant_total) + ' FC';
+            document.getElementById('recapNet').textContent = formatMontant(data.montant_net) + ' FC';
+            const remiseRow = document.getElementById('recapRemiseRow');
+            if (data.montant_remise && data.montant_remise > 0) {
+                document.getElementById('recapPourcent').textContent = (data.remise_pourcent || 0).toFixed(0);
+                document.getElementById('recapRemise').textContent = '- ' + formatMontant(data.montant_remise) + ' FC';
+                remiseRow.style.display = '';
+            } else {
+                remiseRow.style.display = 'none';
+            }
+
+            const modalEl = document.getElementById('recapVenteModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            const btnImprimer = document.getElementById('btnConfirmerImpression');
+            btnImprimer.onclick = function() {
+                btnImprimer.disabled = true;
+                btnImprimer.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Impression...';
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = data.facture_url;
+                document.body.appendChild(iframe);
+                iframe.onload = function() {
+                    try {
+                        iframe.contentWindow.print();
+                    } catch(err) {
+                        window.open(data.facture_url, '_blank');
+                    }
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        window.location.href = data.detail_url;
+                    }, 1000);
+                };
             };
         }
     })

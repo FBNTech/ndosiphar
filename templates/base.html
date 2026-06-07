@@ -237,6 +237,15 @@
             <a href="{% url 'produit_list' %}" class="nav-link {% if 'produit' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-box-seam"></i> Produits
             </a>
+            {% if request.user.is_admin or request.user.is_gerant %}
+            <a href="{% url 'inventaire_list' %}" class="nav-link {% if 'inventaire' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-clipboard2-check"></i> Inventaire
+            </a>
+            {% else %}
+            <a href="{% url 'inventaire_mes_comptages' %}" class="nav-link {% if request.resolver_match.url_name == 'inventaire_mes_comptages' or request.resolver_match.url_name == 'inventaire_saisie' %}active{% endif %}">
+                <i class="bi bi-list-check"></i> Mes comptages
+            </a>
+            {% endif %}
             {% endif %}
 
             {% if not request.user.is_gestionnaire %}

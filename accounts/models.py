@@ -5,6 +5,7 @@ from django.db import models
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'Administrateur'),
+        ('gerant', 'Gérant'),
         ('vendeur', 'Vendeur'),
         ('gestionnaire', 'Gestionnaire'),
         ('controleur', 'Contrôleur'),
@@ -25,6 +26,10 @@ class User(AbstractUser):
     @property
     def is_vendeur(self):
         return self.role == 'vendeur'
+
+    @property
+    def is_gerant(self):
+        return self.role == 'gerant'
 
     @property
     def is_gestionnaire(self):

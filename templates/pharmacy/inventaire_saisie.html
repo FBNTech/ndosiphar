@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% block title %}Saisie inventaire #{{ inventaire.code_inventaire }} - NDOSIPHAR{% endblock %}
+{% block page_title %}Saisie inventaire #{{ inventaire.code_inventaire }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .row-noncomptee { background-color: #fffbeb; }
+    .row-ok { background-color: #f0fdf4; }
+    .row-manquant { background-color: #fef2f2; }
+    .row-excedent { background-color: #fff7ed; }
+    .input-phys { width: 110px; text-align: center; font-weight: 700; }
+    .badge-ecart { min-width: 60px; display: inline-block; text-align: center; }
+    .badge-statut { min-width: 95px; display: inline-block; text-align: center; }
+    .btn-compter { min-width: 110px; }
+    .filter-bar { background: #f8fafc; border-radius: 12px; padding: 0.75rem 1rem; }
+    .stat-box { background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 10px; padding: 0.6rem 1rem; text-align: center; }
+    .stat-box .lbl { font-size: 0.7rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; }
+    .stat-box .val { font-size: 1.1rem; font-weight: 700; }
+    .stat-box.warn { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-info py-2 small">
+    <i class="bi bi-info-circle"></i>
+    Saisissez le <strong>stock physique compté</strong> pour chaque produit, puis cliquez sur
+    <strong>✓ Compter</strong> pour confirmer la ligne (même si la quantité est identique au théorique).
+    Toutes les lignes doivent être confirmées avant validation.
+</div>
+{% if not can_see_sensitive_data %}
+<div class="alert alert-warning py-2 small">
+    <i class="bi bi-eye-slash"></i>
+    Mode aveugle activé : les quantités théoriques et les écarts sont masqués pour votre profil.
+</div>
+{% endif %}
+
+<!-- Stats -->
+<div class="row g-2 mb-3">
+    <div class="col-md-3">
+        <div class="stat-box">
+            <div class="lbl">Total produits</div>
+            <div class="val">{{ lignes|length }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-box">
+            <div class="lbl">Comptés</div>
+            <div class="val text-success" id="statComptes">{{ inventaire.nb_comptees }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-box warn">
+            <div class="lbl">Non comptés</div>
+            <div class="val text-warning" id="statNonComptes">{{ inventaire.nb_non_comptees }}</div>
+        </div>
+    </div>
+    {% if can_see_sensitive_data %}
+    <div class="col-md-3">
+        <div class="stat-box">
+            <div class="lbl">Écarts</div>
+            <div class="val" id="statEcarts">{{ inventaire.nb_ecarts }}</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="filter-bar mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <input type="text" id="rechercheProduit" class="form-control" style="max-width: 280px;"
+           placeholder="🔍 Rechercher un produit...">
+    <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-secondary active" data-filtre="tous">Tous</button>
+        <button type="button" class="btn btn-outline-warning" data-filtre="noncompte">Non comptés</button>
+        <button type="button" class="btn btn-outline-success" data-filtre="compte">Comptés</button>
+        {% if can_see_sensitive_data %}
+        <button type="button" class="btn btn-outline-danger" data-filtre="manquant">Manquants</button>
+        <button type="button" class="btn btn-outline-info" data-filtre="excedent">Excédents</button>
+        {% endif %}
+    </div>
+    {% if can_validate_inventory %}
+    <div class="ms-auto">
+        <a href="{% url 'inventaire_valider' inventaire.pk %}" class="btn btn-success">
+            <i class="bi bi-check2-circle"></i> Valider l'inventaire
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="tableLignes">
+                <thead style="background: #f8fafc;">
+                    <tr>
+                        <th>Produit</th>
+                        {% if can_see_sensitive_data %}
+                        <th class="text-center">Théorique</th>
+                        {% endif %}
+                        <th class="text-center">Physique</th>
+                        {% if can_see_sensitive_data %}
+                        <th class="text-center">Écart</th>
+                        <th class="text-end">Valeur (FC)</th>
+                        {% endif %}
+                        <th class="text-center">Statut</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in lignes %}
+                    <tr data-ligne-id="{{ ligne.pk }}"
+                        {% if can_see_sensitive_data %}
+                        data-theo="{{ ligne.stock_theorique }}"
+                        data-prix="{{ ligne.prix_achat }}"
+                        {% else %}
+                        data-theo="0"
+                        data-prix="0"
+                        {% endif %}
+                        data-nom="{{ ligne.produit.designation|lower }}"
+                        data-comptee="{{ ligne.comptee|yesno:'1,0' }}">
+                        <td><strong>{{ ligne.produit.designation }}</strong></td>
+                        {% if can_see_sensitive_data %}
+                        <td class="text-center text-muted">{{ ligne.stock_theorique }}</td>
+                        {% endif %}
+                        <td class="text-center">
+                            <input type="number" min="0"
+                                   value="{{ ligne.stock_physique }}"
+                                   class="form-control form-control-sm input-phys"
+                                   onchange="markDirty(this)"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();compterLigne(this.closest('tr'));}">
+                        </td>
+                        {% if can_see_sensitive_data %}
+                        <td class="text-center">
+                            <span class="badge badge-ecart cell-ecart bg-secondary">0</span>
+                        </td>
+                        <td class="text-end fw-bold cell-valeur text-muted">0,00</td>
+                        {% endif %}
+                        <td class="text-center">
+                            {% if ligne.comptee %}
+                                <span class="badge badge-statut bg-success cell-statut"><i class="bi bi-check-circle"></i> Compté</span>
+                            {% else %}
+                                <span class="badge badge-statut bg-warning text-dark cell-statut"><i class="bi bi-hourglass"></i> Non compté</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-success btn-compter"
+                                    onclick="compterLigne(this.closest('tr'))">
+                                <i class="bi bi-check2"></i> Compter
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3 d-flex justify-content-between">
+    {% if can_validate_inventory %}
+    <a href="{% url 'inventaire_list' %}" class="btn btn-light border">
+        <i class="bi bi-arrow-left"></i> Retour à la liste
+    </a>
+    {% else %}
+    <a href="{% url 'dashboard' %}" class="btn btn-light border">
+        <i class="bi bi-arrow-left"></i> Retour au tableau de bord
+    </a>
+    {% endif %}
+    <small class="text-muted align-self-center">
+        <i class="bi bi-lightbulb"></i> Astuce : appuyez sur <kbd>Entrée</kbd> dans le champ pour compter rapidement.
+    </small>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const URL_COMPTER = "{% url 'inventaire_ligne_compter' inventaire.pk 0 %}";
+const CAN_SEE_SENSITIVE_DATA = {% if can_see_sensitive_data %}true{% else %}false{% endif %};
+const CAN_RECOUNT = {% if can_recount %}true{% else %}false{% endif %};
+
+function formatMontant(n) {
+    return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ').replace('.', ',');
+}
+
+function markDirty(input) {
+    const tr = input.closest('tr');
+    if (!CAN_RECOUNT && tr.dataset.comptee === '1') {
+        input.value = input.defaultValue;
+        return;
+    }
+    const btn = tr.querySelector('.btn-compter');
+    btn.className = 'btn btn-sm btn-warning btn-compter';
+    btn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Compter';
+    recalculerVisuel(tr);
+}
+
+function recalculerVisuel(tr) {
+    if (!CAN_SEE_SENSITIVE_DATA) {
+        return;
+    }
+    const theo = parseInt(tr.dataset.theo) || 0;
+    const prix = parseFloat(tr.dataset.prix) || 0;
+    const phys = parseInt(tr.querySelector('input').value) || 0;
+    const ecart = phys - theo;
+    const valeur = ecart * prix;
+
+    const cellEcart = tr.querySelector('.cell-ecart');
+    const cellValeur = tr.querySelector('.cell-valeur');
+
+    cellEcart.textContent = (ecart > 0 ? '+' : '') + ecart;
+    cellEcart.className = 'badge badge-ecart cell-ecart ';
+    if (ecart === 0)      cellEcart.className += 'bg-secondary';
+    else if (ecart < 0)   cellEcart.className += 'bg-danger';
+    else                  cellEcart.className += 'bg-warning text-dark';
+
+    cellValeur.textContent = formatMontant(valeur);
+    cellValeur.className = 'text-end fw-bold cell-valeur ' + (valeur < 0 ? 'text-danger' : valeur > 0 ? 'text-success' : 'text-muted');
+}
+
+function applyRowClass(tr) {
+    const theo = parseInt(tr.dataset.theo) || 0;
+    const phys = parseInt(tr.querySelector('input').value) || 0;
+    const ecart = phys - theo;
+    const comptee = tr.dataset.comptee === '1';
+    tr.classList.remove('row-ok', 'row-manquant', 'row-excedent', 'row-noncomptee');
+    if (!comptee) { tr.classList.add('row-noncomptee'); return; }
+    if (!CAN_SEE_SENSITIVE_DATA) {
+        tr.classList.add('row-ok');
+        return;
+    }
+    if (ecart === 0) tr.classList.add('row-ok');
+    else if (ecart < 0) tr.classList.add('row-manquant');
+    else tr.classList.add('row-excedent');
+}
+
+async function compterLigne(tr) {
+    if (!CAN_RECOUNT && tr.dataset.comptee === '1') {
+        alert('Cette ligne est déjà comptée et verrouillée.');
+        return;
+    }
+
+    const ligneId = tr.dataset.ligneId;
+    const input = tr.querySelector('input');
+    const btn = tr.querySelector('.btn-compter');
+    const stockPhysique = input.value;
+
+    if (stockPhysique === '' || parseInt(stockPhysique) < 0) {
+        alert('Veuillez saisir une quantité valide (≥ 0).');
+        input.focus();
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+        const url = URL_COMPTER.replace('/0/compter/', '/' + ligneId + '/compter/');
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', CSRF);
+        fd.append('stock_physique', stockPhysique);
+
+        const res = await fetch(url, { method: 'POST', body: fd });
+        const data = await res.json();
+
+        if (!data.success) {
+            alert(data.error || 'Erreur');
+            btn.disabled = false;
+            btn.className = 'btn btn-sm btn-outline-success btn-compter';
+            btn.innerHTML = '<i class="bi bi-check2"></i> Compter';
+            return;
+        }
+
+        tr.dataset.comptee = '1';
+        const cellStatut = tr.querySelector('.cell-statut');
+        cellStatut.className = 'badge badge-statut bg-success cell-statut';
+        cellStatut.innerHTML = '<i class="bi bi-check-circle"></i> Compté';
+        recalculerVisuel(tr);
+        applyRowClass(tr);
+
+        btn.disabled = false;
+        if (!CAN_RECOUNT) {
+            input.readOnly = true;
+            input.classList.add('bg-light');
+            input.defaultValue = input.value;
+            btn.className = 'btn btn-sm btn-outline-dark btn-compter';
+            btn.innerHTML = '<i class="bi bi-lock"></i> Verrouillé';
+            btn.disabled = true;
+        } else {
+            btn.className = 'btn btn-sm btn-outline-secondary btn-compter';
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Recompter';
+        }
+
+        document.getElementById('statComptes').textContent = data.nb_comptees;
+        document.getElementById('statNonComptes').textContent = data.nb_non_comptees;
+        if (CAN_SEE_SENSITIVE_DATA && data.nb_ecarts !== undefined) {
+            document.getElementById('statEcarts').textContent = data.nb_ecarts;
+        }
+    } catch (err) {
+        alert('Erreur réseau');
+        btn.disabled = false;
+        btn.className = 'btn btn-sm btn-outline-success btn-compter';
+        btn.innerHTML = '<i class="bi bi-check2"></i> Compter';
+    }
+}
+
+document.getElementById('rechercheProduit').addEventListener('input', function() {
+    const terme = this.value.toLowerCase().trim();
+    document.querySelectorAll('#tableLignes tbody tr').forEach(tr => {
+        const nom = tr.dataset.nom || '';
+        tr.style.display = (!terme || nom.includes(terme)) ? '' : 'none';
+    });
+});
+
+document.querySelectorAll('[data-filtre]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('[data-filtre]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const f = this.dataset.filtre;
+        document.querySelectorAll('#tableLignes tbody tr').forEach(tr => {
+            const theo = parseInt(tr.dataset.theo) || 0;
+            const phys = parseInt(tr.querySelector('input').value) || 0;
+            const ecart = phys - theo;
+            const comptee = tr.dataset.comptee === '1';
+            let show = true;
+            if (f === 'noncompte') show = !comptee;
+            else if (f === 'compte') show = comptee;
+            else if (f === 'manquant') show = CAN_SEE_SENSITIVE_DATA && comptee && ecart < 0;
+            else if (f === 'excedent') show = CAN_SEE_SENSITIVE_DATA && comptee && ecart > 0;
+            tr.style.display = show ? '' : 'none';
+        });
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('#tableLignes tbody tr').forEach(tr => {
+        recalculerVisuel(tr);
+        applyRowClass(tr);
+        if (tr.dataset.comptee === '1') {
+            const input = tr.querySelector('input');
+            const btn = tr.querySelector('.btn-compter');
+            if (!CAN_RECOUNT) {
+                input.readOnly = true;
+                input.classList.add('bg-light');
+                input.defaultValue = input.value;
+                btn.className = 'btn btn-sm btn-outline-dark btn-compter';
+                btn.innerHTML = '<i class="bi bi-lock"></i> Verrouillé';
+                btn.disabled = true;
+            } else {
+                btn.className = 'btn btn-sm btn-outline-secondary btn-compter';
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Recompter';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
