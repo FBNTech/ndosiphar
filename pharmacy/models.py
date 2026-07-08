@@ -44,9 +44,10 @@ class Produit(models.Model):
     prix_achat = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Prix d'Achat (FC)")
     quantite_initiale = models.IntegerField(default=0, verbose_name="Quantité Initiale")
     quantite_stock = models.IntegerField(default=0, verbose_name="Quantité en Stock")
-    quantite_alerte = models.IntegerField(default=10, verbose_name="Quantité Alerte")
+    quantite_alerte = models.IntegerField(default=5, verbose_name="Quantité Alerte")
     jours_alerte_expiration = models.IntegerField(default=30, verbose_name="Alerte Expiration (jours avant)")
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.PROTECT, verbose_name="Fournisseur")
+    date_creation = models.DateTimeField(auto_now_add=True, null=True, verbose_name="Date d'enregistrement")
     date_expiration = models.DateField(null=True, blank=True, verbose_name="Date d'Expiration")
     prix_vente_usd = models.DecimalField(max_digits=16, decimal_places=10, default=0, verbose_name="Prix de Vente (USD)")
 

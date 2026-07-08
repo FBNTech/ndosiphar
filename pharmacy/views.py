@@ -126,10 +126,12 @@ def dashboard(request):
         'ventes_mois': ventes_mois['total'] or 0,
         'ventes_mois_nombre': ventes_mois['nombre'],
         'produits_alerte': Produit.objects.filter(quantite_stock__lte=models.F('quantite_alerte')),
+        'nb_requisition': Produit.objects.filter(quantite_stock__lte=models.F('quantite_alerte')).count(),
         'produits_expiration': Produit.objects.filter(
             date_expiration__lte=date.today() + timedelta(days=30)
         ).order_by('date_expiration'),
         'ventes_recentes': Vente.objects.all()[:5],
+        'produits_recents': Produit.objects.select_related('fournisseur').order_by('-date_creation', '-code_produit')[:10],
         'afficher_modal_taux': afficher_modal_taux,
         'taux_usd': taux_usd,
     }
@@ -271,7 +273,7 @@ def produit_list(request):
         form = ProduitForm()
         
         # Valeurs par défaut
-        form.fields['quantite_alerte'].initial = 10
+        form.fields['quantite_alerte'].initial = 5
         form.fields['jours_alerte_expiration'].initial = 45
         
         # Pré-remplir le fournisseur si en session
@@ -900,8 +902,8 @@ def facture_pdf(request, pk):
     vente = get_object_or_404(Vente, pk=pk)
     lignes = list(vente.lignes.select_related('produit').all())
     heure_facture = vente.date_vente.strftime('%H:%M:%S')
-    # Paginer les lignes: max 20 articles par page A5
-    LIGNES_PAR_PAGE = 20
+    # Papier thermique 80mm : pas de limite fixe, toutes les lignes sur une seule page
+    LIGNES_PAR_PAGE = 9999
     pages = []
     for i in range(0, len(lignes), LIGNES_PAR_PAGE):
         chunk = lignes[i:i + LIGNES_PAR_PAGE]
@@ -1070,8 +1072,29 @@ def historique_list(request):
     if not request.user.is_admin and not request.user.is_gestionnaire:
         messages.error(request, "Accès réservé à l'administrateur.")
         return redirect('dashboard')
-    historiques = Historique.objects.select_related('utilisateur').all()[:200]
-    return render(request, 'pharmacy/historique_list.html', {'historiques': historiques})
+
+    from accounts.models import User as UserModel
+    qs = Historique.objects.select_related('utilisateur').all()
+
+    filtre_user = request.GET.get('utilisateur', '').strip()
+    filtre_module = request.GET.get('module', '').strip()
+
+    if filtre_user:
+        qs = qs.filter(utilisateur__pk=filtre_user)
+    if filtre_module:
+        qs = qs.filter(modele=filtre_module)
+
+    historiques = qs[:500]
+    utilisateurs = UserModel.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+    modules = Historique.objects.values_list('modele', flat=True).distinct().exclude(modele='').order_by('modele')
+
+    return render(request, 'pharmacy/historique_list.html', {
+        'historiques': historiques,
+        'utilisateurs': utilisateurs,
+        'modules': modules,
+        'filtre_user': filtre_user,
+        'filtre_module': filtre_module,
+    })
 
 
 # ============ INVENTAIRE ============
@@ -1103,6 +1126,12 @@ def inventaire_mes_comptages(request):
 @admin_gerant_required
 def inventaire_create(request):
     """Démarre un nouvel inventaire en brouillon avec snapshot du stock théorique."""
+    from accounts.models import User as UserModel
+    compteurs_disponibles = UserModel.objects.filter(
+        is_active=True,
+        role__in=['vendeur', 'gestionnaire', 'controleur'],
+    ).order_by('first_name', 'last_name', 'username')
+
     if request.method == 'POST':
         observation = request.POST.get('observation', '').strip()
         inv = Inventaire.objects.create(
@@ -1110,7 +1139,10 @@ def inventaire_create(request):
             statut='brouillon',
             observation=observation,
         )
-        inv.compteurs_autorises.clear()
+        user_ids = request.POST.getlist('compteurs')
+        if user_ids:
+            eligibles = compteurs_disponibles.filter(pk__in=user_ids)
+            inv.compteurs_autorises.set(eligibles)
         # Snapshot: une ligne par produit avec stock théorique = stock actuel
         produits = Produit.objects.all().order_by('designation')
         lignes = [
@@ -1131,7 +1163,9 @@ def inventaire_create(request):
                                f"Inventaire #{inv.code_inventaire} démarré ({inv.nb_produits_comptes} produits)")
         messages.success(request, f"Inventaire #{inv.code_inventaire} créé. Procédez à la saisie du comptage.")
         return redirect('inventaire_saisie', pk=inv.pk)
-    return render(request, 'pharmacy/inventaire_form.html')
+    return render(request, 'pharmacy/inventaire_form.html', {
+        'compteurs_disponibles': compteurs_disponibles,
+    })
 
 
 @login_required
@@ -1357,6 +1391,56 @@ def inventaire_pdf(request, pk):
     html = template.render(context)
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'filename="inventaire_{inv.code_inventaire}.pdf"'
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse("Erreur lors de la génération du PDF", status=500)
+    return response
+
+
+# ============ RÉQUISITION ============
+
+@login_required
+def requisition_list(request):
+    """Liste des produits ayant atteint ou dépassé le seuil d'alerte de stock."""
+    from django.db.models import ExpressionWrapper, IntegerField, F
+    produits = (
+        Produit.objects.select_related('fournisseur')
+        .filter(quantite_stock__lte=F('quantite_alerte'))
+        .annotate(manquant=ExpressionWrapper(F('quantite_alerte') - F('quantite_stock'), output_field=IntegerField()))
+        .order_by('fournisseur__designation', 'designation')
+    )
+    return render(request, 'pharmacy/requisition_list.html', {
+        'produits': produits,
+        'nb_produits': produits.count(),
+    })
+
+
+@login_required
+def requisition_pdf(request):
+    """PDF de la liste des produits en alerte de stock."""
+    import os, base64
+    from django.db.models import ExpressionWrapper, IntegerField, F
+    produits = (
+        Produit.objects.select_related('fournisseur')
+        .filter(quantite_stock__lte=F('quantite_alerte'))
+        .annotate(manquant=ExpressionWrapper(F('quantite_alerte') - F('quantite_stock'), output_field=IntegerField()))
+        .order_by('fournisseur__designation', 'designation')
+    )
+    logo_data = None
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png')
+    if os.path.exists(logo_path):
+        with open(logo_path, 'rb') as f:
+            logo_data = 'data:image/png;base64,' + base64.b64encode(f.read()).decode('utf-8')
+
+    template = get_template('pharmacy/requisition_pdf.html')
+    html = template.render({
+        'produits': produits,
+        'date_impression': timezone.now(),
+        'logo_data': logo_data,
+        'utilisateur': request.user,
+    })
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'filename="requisition_{timezone.now().strftime("%Y%m%d_%H%M")}.pdf"'
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
         return HttpResponse("Erreur lors de la génération du PDF", status=500)

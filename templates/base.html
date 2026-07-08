@@ -246,6 +246,9 @@
                 <i class="bi bi-list-check"></i> Mes comptages
             </a>
             {% endif %}
+            <a href="{% url 'requisition_list' %}" class="nav-link {% if 'requisition' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-exclamation-triangle"></i> Réquisition
+            </a>
             {% endif %}
 
             {% if not request.user.is_gestionnaire %}

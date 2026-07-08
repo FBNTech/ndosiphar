@@ -75,4 +75,8 @@ urlpatterns = [
     # Historique
     path('historique-ventes/', views.historique_ventes, name='historique_ventes'),
     path('historique/', views.historique_list, name='historique_list'),
+
+    # Réquisition
+    path('requisition/', views.requisition_list, name='requisition_list'),
+    path('requisition/pdf/', views.requisition_pdf, name='requisition_pdf'),
 ]

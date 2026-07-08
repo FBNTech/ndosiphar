@@ -136,6 +136,28 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
     </div>
+    <div class="col-md-4 col-lg">
+        <div class="card stat-card" style="border-left: 4px solid #dc2626;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Réquisition</h6>
+                        <h3 class="mb-0 text-danger">{{ nb_requisition }}</h3>
+                        <small class="text-muted">produit(s) en alerte</small>
+                    </div>
+                    <div class="text-danger"><i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i></div>
+                </div>
+                <div class="d-flex gap-1 mt-2">
+                    <a href="{% url 'requisition_list' %}" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.75rem;">
+                        <i class="bi bi-eye"></i> Voir
+                    </a>
+                    <a href="{% url 'requisition_pdf' %}" class="btn btn-sm btn-danger py-0 px-2" style="font-size:0.75rem;" target="_blank">
+                        <i class="bi bi-printer"></i> Imprimer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Totaux Ventes : Jour / Semaine / Mois -->
@@ -281,6 +303,58 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tr>
                             {% empty %}
                             <tr><td colspan="3" class="text-center text-muted">Aucun produit proche de l'expiration.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card-header d-flex justify-content-between align-items-center" style="border-radius: 12px 12px 0 0;">
+                <span><i class="bi bi-box-seam"></i> Derniers produits enregistrés</span>
+                {% if not request.user.is_vendeur %}
+                <a href="{% url 'produit_list' %}" class="btn btn-sm btn-outline-secondary">Voir tous</a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>#</th>
+                                <th>Produit</th>
+                                <th>Fournisseur</th>
+                                <th class="text-center">Stock</th>
+                                <th class="text-center">Alerte</th>
+                                <th class="text-end">Prix achat (FC)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in produits_recents %}
+                            <tr>
+                                <td class="text-muted small">{{ p.date_creation|date:"d/m/Y"|default:"—" }}</td>
+                                <td class="text-muted small">{{ p.code_produit }}</td>
+                                <td>
+                                    <strong>{{ p.designation }}</strong>
+                                    {% if p.stock_alerte %}
+                                    <span class="badge bg-danger ms-1" style="font-size:0.7rem;">Alerte</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ p.fournisseur.designation }}</td>
+                                <td class="text-center {% if p.quantite_stock == 0 %}text-danger fw-bold{% elif p.stock_alerte %}text-warning fw-bold{% endif %}">
+                                    {{ p.quantite_stock }}
+                                </td>
+                                <td class="text-center text-muted">{{ p.quantite_alerte }}</td>
+                                <td class="text-end">{{ p.prix_achat|floatformat:0 }} FC</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="7" class="text-center text-muted py-3">Aucun produit enregistré.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>

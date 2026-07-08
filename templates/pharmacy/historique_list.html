@@ -3,12 +3,48 @@
 {% block page_title %}Historique des Actions{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-clock-history"></i> Journal d'Audit</span>
-        <span class="badge bg-secondary">{{ historiques|length }} entrée(s)</span>
+<!-- Filtres -->
+<div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Utilisateur</label>
+                <select name="utilisateur" class="form-select form-select-sm">
+                    <option value="">— Tous les utilisateurs —</option>
+                    {% for u in utilisateurs %}
+                    <option value="{{ u.pk }}" {% if filtre_user == u.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ u.get_full_name|default:u.username }} ({{ u.get_role_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Module</label>
+                <select name="module" class="form-select form-select-sm">
+                    <option value="">— Tous les modules —</option>
+                    {% for m in modules %}
+                    <option value="{{ m }}" {% if filtre_module == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+                <a href="{% url 'historique_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Réinitialiser
+                </a>
+            </div>
+        </form>
     </div>
-    <div class="card-body">
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: 12px;">
+    <div class="card-header d-flex justify-content-between align-items-center" style="border-radius: 12px 12px 0 0;">
+        <span><i class="bi bi-clock-history"></i> Journal d'Audit</span>
+        <span class="badge bg-secondary">{{ historiques|length }} entrée(s){% if filtre_user or filtre_module %} filtrée(s){% endif %}</span>
+    </div>
+    <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -23,8 +59,8 @@
                 <tbody>
                     {% for h in historiques %}
                     <tr>
-                        <td data-label="Date"><small class="text-muted">{{ h.date_action|date:"d/m/Y H:i:s" }}</small></td>
-                        <td data-label="Utilisateur">
+                        <td><small class="text-muted">{{ h.date_action|date:"d/m/Y H:i:s" }}</small></td>
+                        <td>
                             {% if h.utilisateur %}
                             <strong>{{ h.utilisateur.get_full_name|default:h.utilisateur.username }}</strong>
                             <br><small class="text-muted">{{ h.utilisateur.get_role_display }}</small>
@@ -32,24 +68,30 @@
                             <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td data-label="Action">
+                        <td>
                             {% if h.action == 'creation' %}
                             <span class="badge bg-success"><i class="bi bi-plus-circle"></i> Création</span>
-                            {% elif h.action == 'modification' %}
+                            {% elif h.action == 'modification' or h.action == 'modification_taux' %}
                             <span class="badge bg-warning text-dark"><i class="bi bi-pencil"></i> Modification</span>
                             {% elif h.action == 'suppression' %}
                             <span class="badge bg-danger"><i class="bi bi-trash"></i> Suppression</span>
                             {% elif h.action == 'connexion' %}
                             <span class="badge bg-info"><i class="bi bi-box-arrow-in-right"></i> Connexion</span>
+                            {% elif h.action == 'paiement' %}
+                            <span class="badge bg-primary"><i class="bi bi-cash-coin"></i> Paiement</span>
                             {% else %}
                             <span class="badge bg-secondary">{{ h.get_action_display }}</span>
                             {% endif %}
                         </td>
-                        <td data-label="Module">{{ h.modele|default:"—" }}</td>
-                        <td data-label="Détail"><small>{{ h.detail|default:"—" }}</small></td>
+                        <td>
+                            {% if h.modele %}
+                            <span class="badge bg-light text-dark border">{{ h.modele }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td><small>{{ h.detail|default:"—" }}</small></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted">Aucune action enregistrée.</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-4">Aucune action enregistrée{% if filtre_user or filtre_module %} pour ce filtre{% endif %}.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

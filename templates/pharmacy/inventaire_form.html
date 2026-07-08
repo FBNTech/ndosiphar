@@ -3,7 +3,7 @@
 {% block page_title %}Nouvel inventaire{% endblock %}
 
 {% block content %}
-<div class="card border-0 shadow-sm" style="max-width: 640px; border-radius: 16px;">
+<div class="card border-0 shadow-sm" style="max-width: 700px; border-radius: 16px;">
     <div class="card-body p-4">
         <div class="text-center mb-3">
             <i class="bi bi-clipboard2-plus text-success" style="font-size: 2.5rem;"></i>
@@ -17,9 +17,46 @@
             {% csrf_token %}
             <div class="mb-3">
                 <label class="form-label small text-muted">Observation (facultatif)</label>
-                <textarea name="observation" rows="3" class="form-control"
+                <textarea name="observation" rows="2" class="form-control"
                           placeholder="Ex: Inventaire mensuel de fin de mois..."></textarea>
             </div>
+
+            <div class="mb-4">
+                <label class="form-label small text-muted fw-semibold">
+                    <i class="bi bi-people"></i> Compteurs autorisés
+                    <span class="text-danger">*</span>
+                </label>
+                {% if compteurs_disponibles %}
+                <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto; background: #f8fafc;">
+                    <div class="mb-2 d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small"
+                                onclick="toggleAll(true)">Tout sélectionner</button>
+                        <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small"
+                                onclick="toggleAll(false)">Tout désélectionner</button>
+                    </div>
+                    {% for u in compteurs_disponibles %}
+                    <div class="form-check">
+                        <input class="form-check-input compteur-cb" type="checkbox"
+                               name="compteurs" value="{{ u.pk }}" id="cpt_{{ u.pk }}">
+                        <label class="form-check-label small" for="cpt_{{ u.pk }}">
+                            {{ u.get_full_name|default:u.username }}
+                            <span class="text-muted">({{ u.get_role_display }})</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="form-text text-muted">
+                    <i class="bi bi-eye-slash"></i>
+                    Les compteurs sélectionnés ne verront pas le stock théorique ni les écarts (mode aveugle).
+                </div>
+                {% else %}
+                <div class="alert alert-warning py-2 small mb-0">
+                    Aucun utilisateur éligible (Vendeur, Gestionnaire, Contrôleur) n'est disponible.
+                    Vous pourrez assigner des compteurs depuis le détail de l'inventaire.
+                </div>
+                {% endif %}
+            </div>
+
             <div class="d-flex gap-2 justify-content-end">
                 <a href="{% url 'inventaire_list' %}" class="btn btn-light border">Annuler</a>
                 <button type="submit" class="btn btn-success">
@@ -29,4 +66,10 @@
         </form>
     </div>
 </div>
+
+<script>
+function toggleAll(checked) {
+    document.querySelectorAll('.compteur-cb').forEach(cb => cb.checked = checked);
+}
+</script>
 {% endblock %}

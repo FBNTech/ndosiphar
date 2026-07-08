@@ -65,8 +65,10 @@ class ProduitForm(forms.ModelForm):
                 self.fields[field].widget.attrs['placeholder'] = ph
                 self.fields[field].widget.attrs['class'] = 'form-control'
             self.fields[field].label = ''
-            if field != 'date_expiration':
+            if field not in ('date_expiration', 'quantite_alerte'):
                 self.fields[field].initial = None
+        if not self.instance.pk:
+            self.fields['quantite_alerte'].initial = 5
         for field in ['fournisseur', 'date_expiration']:
             if field in self.fields:
                 self.fields[field].label = ''
