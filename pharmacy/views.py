@@ -902,8 +902,7 @@ def facture_pdf(request, pk):
     vente = get_object_or_404(Vente, pk=pk)
     lignes = list(vente.lignes.select_related('produit').all())
     heure_facture = vente.date_vente.strftime('%H:%M:%S')
-    # Papier thermique 80mm : pas de limite fixe, toutes les lignes sur une seule page
-    LIGNES_PAR_PAGE = 9999
+    LIGNES_PAR_PAGE = 15
     pages = []
     for i in range(0, len(lignes), LIGNES_PAR_PAGE):
         chunk = lignes[i:i + LIGNES_PAR_PAGE]
